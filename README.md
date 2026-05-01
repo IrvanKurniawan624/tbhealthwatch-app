@@ -1,17 +1,38 @@
-# projekakhir
+KATA MY FREIND SEPERTI INI GUYS
+# 🏥 TB Health Watch - Mobile App
 
-A new Flutter project.
+Repositori ini berisi kode *frontend* (UI) untuk aplikasi mobile **TB Health Watch** yang dibangun menggunakan *framework* Flutter. 
 
-## Getting Started
+## 🎯 Progress Pengerjaan - Minggu 1
 
-This project is a starting point for a Flutter application.
+Pada sprint/minggu pertama ini, pengerjaan difokuskan pada penyelesaian antarmuka pengguna (UI) untuk fitur manajemen profil, serta penyusunan arsitektur dasar aplikasi agar ramah untuk kerja tim (*Clean Code*).
 
-A few resources to get you started if this is your first Flutter project:
+### Fitur & Implementasi yang Telah Diselesaikan:
+*   ✅ **Slicing UI Profile Page:** Menyelesaikan tampilan halaman profil tenaga medis sesuai dengan desain Figma.
+*   ✅ **Slicing UI Edit Profile Page:** Menyelesaikan halaman formulir (*form*) interaktif untuk mengubah data profil.
+*   ✅ **Component-Based UI (Clean Code):** Memecah kode UI yang panjang menjadi *widget-widget* kecil yang independen (seperti `AvatarSection`, `FacilityCard`, `CustomTextField`, dll) agar kode mudah dibaca, di-*review*, dan digunakan ulang (*reusable*) oleh anggota tim lain.
+*   ✅ **Penerapan Repository Pattern:** Memisahkan lapisan data (*Data Layer*) dari antarmuka (*Presentation Layer*).
+*   ✅ **Mock Data (Dummy):** Membuat `MockProfileRepository` untuk menyimulasikan pemanggilan data dengan jeda waktu. Hal ini memungkinkan UI bisa dites secara utuh dan dipresentasikan meskipun API *backend* belum selesai.
+*   ✅ **Data Model Setup:** Membangun `Profile` model lengkap dengan fungsi `fromJson` dan `toJson` untuk persiapan *parsing* data.
+*   ✅ **Global Theming:** Mengatur tema utama aplikasi di `main.dart` menggunakan Material 3 dan warna *primary* khusus (`#0052CC`) yang sesuai dengan *guideline* desain.
 
-- [Learn Flutter](https://docs.flutter.dev/get-started/learn-flutter)
-- [Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Flutter learning resources](https://docs.flutter.dev/reference/learning-resources)
+---
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+## 📂 Struktur Folder Utama
+Arsitektur dalam folder `lib` dirancang sedemikian rupa agar aman dari konflik saat bekerja bersama-sama:
+```text
+lib/
+ ┣ 📂 data/                      # Lapisan Data (Models & Repositories)
+ ┃ ┣ 📂 models/
+ ┃ ┃ ┗ 📄 profile_model.dart     # Struktur data & fungsi parsing JSON
+ ┃ ┗ 📂 repositories/
+ ┃   ┣ 📄 profile_repository.dart       # Kontrak/Interface data
+ ┃   ┣ 📄 mock_profile_repository.dart  # Dummy data untuk testing UI
+ ┃   ┗ 📄 api_profile_repository.dart   # Tempat menaruh logika HTTP Request ke Backend
+ ┃
+ ┣ 📂 presentation/              # Lapisan UI (Pages & Widgets)
+ ┃ ┗ 📂 pages/
+ ┃   ┣ 📄 profile_page.dart
+ ┃   ┗ 📄 edit_profile_page.dart
+ ┃
+ ┗ 📄 main.dart                  # Entry point aplikasi & setting tema
