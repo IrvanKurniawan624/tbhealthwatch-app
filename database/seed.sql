@@ -75,7 +75,7 @@ INSERT INTO users (
     'RSUD Dr. Soetomo',
     'Koordinator Pemantauan Wilayah Gubeng, Surabaya Timur',
     'RSUD Dr. Soetomo, Surabaya',
-    (SELECT id FROM regions WHERE name = 'Gubeng'),
+    (SELECT id FROM regions WHERE code = 'SURABAYA.GUBENG'),
     '+62 811 3452 900',
     'Jl. Arief Rahman Hakim No.99, Sukolilo, Surabaya',
     true

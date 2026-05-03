@@ -108,8 +108,14 @@ CREATE TABLE patient_treatments (
 
     CONSTRAINT chk_phase1 CHECK (phase_1_end_date >= phase_1_start_date),
     CONSTRAINT chk_phase2 CHECK (
-        phase_2_end_date IS NULL OR
-        phase_2_end_date >= COALESCE(phase_2_start_date, phase_1_end_date)
+        (phase_2_start_date IS NULL AND phase_2_end_date IS NULL) OR
+        (
+            phase_2_start_date >= phase_1_end_date AND
+            (phase_2_end_date IS NULL OR phase_2_end_date >= phase_2_start_date)
+        )
+    ),
+    CONSTRAINT chk_phase2_requires_start CHECK (
+        phase_2_end_date IS NULL OR phase_2_start_date IS NOT NULL
     )
 );
 
@@ -136,7 +142,12 @@ SELECT
             THEN 'Resiko Tinggi'
         WHEN CURRENT_DATE < (pt.phase_1_end_date + INTERVAL '4 months')
             THEN 'Dalam Perawatan'
-        ELSE 'Stable'
+        ELSE
+          CASE pt.status
+            WHEN 'completed'    THEN 'Selesai'
+            WHEN 'discontinued' THEN 'Dihentikan'
+            ELSE 'Perlu Evaluasi'
+          END
     END AS status
 FROM patients p
 LEFT JOIN patient_treatments pt
@@ -165,6 +176,7 @@ CREATE TABLE daily_medication_target_items (
     dosage_mg     INTEGER,
     sequence      SMALLINT    NOT NULL DEFAULT 1,
     created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    ,CONSTRAINT uq_target_medication UNIQUE (target_id, medication_id)
 );
 
 -- =============================================================================
@@ -221,9 +233,6 @@ CREATE TABLE audit_logs (
 -- =============================================================================
 -- Indexes
 -- =============================================================================
-CREATE INDEX idx_patient_treatments_patient_active
-    ON patient_treatments (patient_id)
-    WHERE status = 'active';
 -- Note: idx_patient_treatments_one_active (unique) was created above with the table
 
 CREATE INDEX idx_patient_medication_logs_treatment_date
@@ -235,3 +244,21 @@ CREATE INDEX idx_daily_medication_targets_date
 CREATE INDEX idx_patients_region_active
     ON patients (region_id)
     WHERE deleted_at IS NULL;
+
+-- Notification unread badge
+CREATE INDEX idx_notifications_user_unread
+    ON notifications (recipient_user_id)
+    WHERE is_read = false;
+
+-- Audit log per entity lookups
+CREATE INDEX idx_audit_logs_entity
+    ON audit_logs (entity_type, entity_id);
+
+-- Refresh token per-user queries
+CREATE INDEX idx_refresh_tokens_user_active
+    ON refresh_tokens (user_id, expires_at)
+    WHERE revoked_at IS NULL;
+
+-- Daily compliance rate queries
+CREATE INDEX idx_patient_medication_logs_date
+    ON patient_medication_logs (log_date DESC);
