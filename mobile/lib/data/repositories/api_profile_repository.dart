@@ -24,6 +24,7 @@ class ApiProfileRepository implements IProfileRepository {
     }
   }
 
+  @override
   Future<void> updateProfileData(Profile profile) async {
     try {
       final response = await http.put(

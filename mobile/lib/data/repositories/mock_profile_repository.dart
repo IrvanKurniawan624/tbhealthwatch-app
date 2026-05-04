@@ -17,6 +17,7 @@ class MockProfileRepository implements IProfileRepository {
       facilityName: "Fasilitas Kesehatan",
       facilityRole: "Koordinator Pemantauan Wilayah Gubeng, Surabaya Timur",
       assignmentLocation: "RSUD Dr. Soetomo,\nSurabaya",
+      wilayah: "Gubeng",
       email: "siti.aminah@gmail.com",
       phone: "+62 811 3452 900",
       address: "Jl. Arief Rahman Hakim\nNo.99, Sukolilo, Surabaya",

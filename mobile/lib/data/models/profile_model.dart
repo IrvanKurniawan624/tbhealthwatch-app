@@ -11,6 +11,7 @@ class Profile {
   final String facilityName;
   final String facilityRole;
   final String assignmentLocation;
+  final String? wilayah;
   final String email;
   final String phone;
   final String address;
@@ -22,6 +23,7 @@ class Profile {
     required this.facilityName,
     required this.facilityRole,
     required this.assignmentLocation,
+    this.wilayah,
     required this.email,
     required this.phone,
     required this.address,
@@ -40,6 +42,7 @@ class Profile {
       facilityName: json['facilityName'] ?? '',
       facilityRole: json['facilityRole'] ?? '',
       assignmentLocation: json['assignmentLocation'] ?? '',
+      wilayah: json['wilayah'] as String?,
       email: json['email'] ?? '',
       phone: json['phone'] ?? '',
       address: json['address'] ?? '',
@@ -56,6 +59,7 @@ class Profile {
       'facilityName': facilityName,
       'facilityRole': facilityRole,
       'assignmentLocation': assignmentLocation,
+      'wilayah': wilayah,
       'email': email,
       'phone': phone,
       'address': address,
