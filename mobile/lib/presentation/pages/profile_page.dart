@@ -51,7 +51,7 @@ class _ProfilePageState extends State<ProfilePage> {
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
                   // --- Merakit komponen-komponen UI di sini ---
-                  AvatarSection(profile: profile), 
+                  AvatarSection(profile: profile, repository: _repository),
                   const SizedBox(height: 24),
                   FacilityCard(profile: profile),
                   const SizedBox(height: 24),
@@ -121,8 +121,9 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
 // ============================================================================
 class AvatarSection extends StatelessWidget {
   final Profile profile;
+  final IProfileRepository? repository;
 
-  const AvatarSection({super.key, required this.profile});
+  const AvatarSection({super.key, required this.profile, this.repository});
 
   @override
   Widget build(BuildContext context) {
@@ -172,7 +173,7 @@ class AvatarSection extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (context) => EditProfilePage(profile: profile),
+                builder: (context) => EditProfilePage(profile: profile, repository: repository),
               ),
             );
           },
@@ -398,7 +399,7 @@ class ProfileBottomNav extends StatelessWidget {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Surveillance'),
         BottomNavigationBarItem(icon: Icon(Icons.link), label: 'Monitoring'),
-        BottomNavigationBarItem(icon: Icon(Icons.link), label: 'Monitoring'),
+        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Pasien'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );

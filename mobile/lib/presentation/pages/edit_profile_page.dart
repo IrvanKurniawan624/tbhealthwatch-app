@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../data/models/profile_model.dart';
+import '../../data/repositories/profile_repository.dart';
 
 // ============================================================================
 // 1. HALAMAN UTAMA (ROOT PAGE - STATEFUL)
@@ -7,8 +8,9 @@ import '../../data/models/profile_model.dart';
 // ============================================================================
 class EditProfilePage extends StatefulWidget {
   final Profile profile;
+  final IProfileRepository? repository;
 
-  const EditProfilePage({super.key, required this.profile});
+  const EditProfilePage({super.key, required this.profile, this.repository});
 
   @override
   State<EditProfilePage> createState() => _EditProfilePageState();
@@ -24,12 +26,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _addressController;
 
   String? _selectedWilayah;
+  // TODO: fetch from /api/regions once auth is wired
   final List<String> _wilayahList = [
-    'Surabaya Pusat',
-    'Surabaya Utara',
-    'Surabaya Selatan',
-    'Surabaya Timur',
-    'Surabaya Barat'
+    'Asemrowo', 'Benowo', 'Bubutan', 'Bulak', 'Dukuh Pakis',
+    'Gayungan', 'Genteng', 'Gubeng', 'Gunung Anyar', 'Jambangan',
+    'Karang Pilang', 'Kenjeran', 'Krembangan', 'Lakarsantri', 'Mulyorejo',
+    'Pabean Cantian', 'Pakal', 'Rungkut', 'Sambikerep', 'Sawahan',
+    'Semampir', 'Simokerto', 'Sukolilo', 'Sukomanunggal', 'Tambaksari',
+    'Tandes', 'Tegalsari', 'Tenggilis Mejoyo', 'Wiyung', 'Wonocolo',
+    'Wonokromo',
   ];
 
   @override
@@ -38,12 +43,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
     // Mengisi form awal dengan data dari profile yang diklik
     _nameController = TextEditingController(text: widget.profile.name);
     _roleController = TextEditingController(text: widget.profile.role);
-    _locationController = TextEditingController(text: "RSUD Dr. Soetomo, Surabaya");
+    _locationController = TextEditingController(text: widget.profile.assignmentLocation);
     _emailController = TextEditingController(text: widget.profile.email);
     _phoneController = TextEditingController(text: widget.profile.phone);
     _addressController = TextEditingController(text: widget.profile.address.replaceAll('\n', ' '));
     
-    _selectedWilayah = 'Surabaya Timur'; 
+    _selectedWilayah = widget.profile.wilayah ?? 'Gubeng';
   }
 
   @override
@@ -58,16 +63,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  // Fungsi untuk menyimpan data
   void _handleSave() {
-    // ---------------------------------------------------------
-    // ⚠️ TEMPAT MENYAMBUNGKAN KE BACKEND ASP.NET CORE NANTI
-    // Di sini kamu bisa memanggil repository untuk update data.
-    // ---------------------------------------------------------
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Perubahan berhasil disimpan!")),
+    _doSave();
+  }
+
+  Future<void> _doSave() async {
+    final updatedProfile = Profile(
+      name: _nameController.text,
+      role: _roleController.text,
+      facilityName: widget.profile.facilityName,
+      facilityRole: widget.profile.facilityRole,
+      assignmentLocation: _locationController.text,
+      wilayah: _selectedWilayah,
+      email: _emailController.text,
+      phone: _phoneController.text,
+      address: _addressController.text,
     );
-    Navigator.pop(context); // Kembali ke halaman profil
+    if (widget.repository != null) {
+      try {
+        await widget.repository!.updateProfileData(updatedProfile);
+      } catch (_) {
+        // error handling deferred until auth is wired
+      }
+    }
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Perubahan berhasil disimpan!")),
+      );
+      Navigator.pop(context);
+    }
   }
 
   @override
@@ -450,7 +474,7 @@ class EditProfileBottomNav extends StatelessWidget {
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Surveillance'),
         BottomNavigationBarItem(icon: Icon(Icons.link), label: 'Monitoring'),
-        BottomNavigationBarItem(icon: Icon(Icons.link), label: 'Monitoring'),
+        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Pasien'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
