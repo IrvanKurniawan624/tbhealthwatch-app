@@ -3,6 +3,9 @@ import 'profile_repository.dart';
 
 class MockProfileRepository implements IProfileRepository {
   @override
+  Future<void> updateProfileData(Profile profile) async {}
+
+  @override
   Future<Profile> getProfileData() async {
     // Simulasi loading jaringan 1.5 detik
     await Future.delayed(const Duration(milliseconds: 1500));
