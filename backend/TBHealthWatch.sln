@@ -1,0 +1,49 @@
+
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TBHealthWatch.Api", "src\TBHealthWatch.Api\TBHealthWatch.Api.csproj", "{6EF34473-0DE2-468A-8D54-A9DD2CE25E8A}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TBHealthWatch.Application", "src\TBHealthWatch.Application\TBHealthWatch.Application.csproj", "{CE7C3E4B-ABAE-4263-AF18-E7DB202A83E1}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TBHealthWatch.Domain", "src\TBHealthWatch.Domain\TBHealthWatch.Domain.csproj", "{3DD6E7B4-167A-4EE4-91A2-025D10B4AD10}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TBHealthWatch.Infrastructure", "src\TBHealthWatch.Infrastructure\TBHealthWatch.Infrastructure.csproj", "{328D08CB-FB9F-4C7E-860B-11F8E181B493}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TBHealthWatch.Api.Tests", "tests\TBHealthWatch.Api.Tests\TBHealthWatch.Api.Tests.csproj", "{C8BF970C-6EA5-4DA3-9468-9915D37FE9A9}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{6EF34473-0DE2-468A-8D54-A9DD2CE25E8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6EF34473-0DE2-468A-8D54-A9DD2CE25E8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6EF34473-0DE2-468A-8D54-A9DD2CE25E8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6EF34473-0DE2-468A-8D54-A9DD2CE25E8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CE7C3E4B-ABAE-4263-AF18-E7DB202A83E1}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE7C3E4B-ABAE-4263-AF18-E7DB202A83E1}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE7C3E4B-ABAE-4263-AF18-E7DB202A83E1}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE7C3E4B-ABAE-4263-AF18-E7DB202A83E1}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3DD6E7B4-167A-4EE4-91A2-025D10B4AD10}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3DD6E7B4-167A-4EE4-91A2-025D10B4AD10}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3DD6E7B4-167A-4EE4-91A2-025D10B4AD10}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3DD6E7B4-167A-4EE4-91A2-025D10B4AD10}.Release|Any CPU.Build.0 = Release|Any CPU
+		{328D08CB-FB9F-4C7E-860B-11F8E181B493}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{328D08CB-FB9F-4C7E-860B-11F8E181B493}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{328D08CB-FB9F-4C7E-860B-11F8E181B493}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{328D08CB-FB9F-4C7E-860B-11F8E181B493}.Release|Any CPU.Build.0 = Release|Any CPU
+		{C8BF970C-6EA5-4DA3-9468-9915D37FE9A9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C8BF970C-6EA5-4DA3-9468-9915D37FE9A9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C8BF970C-6EA5-4DA3-9468-9915D37FE9A9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C8BF970C-6EA5-4DA3-9468-9915D37FE9A9}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {92B5FBFC-F65E-456C-BE56-4BDE6C5FB9EE}
+	EndGlobalSection
+EndGlobal

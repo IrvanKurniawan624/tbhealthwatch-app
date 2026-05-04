@@ -1,0 +1,19 @@
+## .NET
+*.user
+*.suo
+.vs/
+bin/
+obj/
+*.nupkg
+*.snupkg
+*.log
+project.lock.json
+.packages/
+PublishProfiles/
+secrets.json
+appsettings.Development.json
+
+## Rider / VS Code
+.idea/
+.vscode/
+*.DotSettings.user
