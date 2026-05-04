@@ -24,12 +24,15 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _addressController;
 
   String? _selectedWilayah;
+  // TODO: fetch from /api/regions once auth is wired
   final List<String> _wilayahList = [
-    'Surabaya Pusat',
-    'Surabaya Utara',
-    'Surabaya Selatan',
-    'Surabaya Timur',
-    'Surabaya Barat'
+    'Asemrowo', 'Benowo', 'Bubutan', 'Bulak', 'Dukuh Pakis',
+    'Gayungan', 'Genteng', 'Gubeng', 'Gunung Anyar', 'Jambangan',
+    'Karang Pilang', 'Kenjeran', 'Krembangan', 'Lakarsantri', 'Mulyorejo',
+    'Pabean Cantian', 'Pakal', 'Rungkut', 'Sambikerep', 'Sawahan',
+    'Semampir', 'Simokerto', 'Sukolilo', 'Sukomanunggal', 'Tambaksari',
+    'Tandes', 'Tegalsari', 'Tenggilis Mejoyo', 'Wiyung', 'Wonocolo',
+    'Wonokromo',
   ];
 
   @override
@@ -43,7 +46,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _phoneController = TextEditingController(text: widget.profile.phone);
     _addressController = TextEditingController(text: widget.profile.address.replaceAll('\n', ' '));
     
-    _selectedWilayah = 'Surabaya Timur'; 
+    _selectedWilayah = 'Gubeng';
   }
 
   @override
