@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'presentation/pages/profile_page.dart';
+import 'presentation/profile/profile_page.dart';
 
 // ============================================================================
 // FILE UTAMA (ENTRY POINT)

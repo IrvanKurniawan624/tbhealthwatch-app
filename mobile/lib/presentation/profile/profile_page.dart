@@ -4,6 +4,7 @@ import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/mock_profile_repository.dart';
 import '../widgets/custom_bottom_nav.dart';
+import '../widgets/custom_app_bar.dart';
 
 // ============================================================================
 // 1. HALAMAN UTAMA (ROOT PAGE)
@@ -36,7 +37,8 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const ProfileAppBar(), // <-- Memanggil komponen Header
+      // MENGGUNAKAN GLOBAL APP BAR (Tanpa Tombol Back)
+      appBar: const CustomAppBar(), 
       body: FutureBuilder<Profile>(
         future: _profileFuture,
         builder: (context, snapshot) {
@@ -73,50 +75,7 @@ class _ProfilePageState extends State<ProfilePage> {
 }
 
 // ============================================================================
-// 2. KOMPONEN: APP BAR / HEADER
-// Bagian atas aplikasi yang berisi Logo, Judul, dan Notifikasi.
-// ============================================================================
-class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const ProfileAppBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      title: Row(
-        children: [
-          Image.asset(
-            'assets/images/logo.png',
-            height: 24,
-            errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.blue),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            "TB Health Watch",
-            style: TextStyle(
-              color: Color(0xFF0052CC),
-              fontWeight: FontWeight.bold,
-              fontSize: 16,
-            ),
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.black87),
-          onPressed: () {},
-        ),
-      ],
-    );
-  }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-}
-
-// ============================================================================
-// 3. KOMPONEN: AVATAR & INFO SINGKAT
+// 2. KOMPONEN: AVATAR & INFO SINGKAT
 // Berisi foto profil, badge "Verified", nama, peran, dan tombol Edit Profile.
 // ============================================================================
 class AvatarSection extends StatelessWidget {
@@ -197,7 +156,7 @@ class AvatarSection extends StatelessWidget {
 }
 
 // ============================================================================
-// 4. KOMPONEN: KARTU FASILITAS KESEHATAN (Warna Biru)
+// 3. KOMPONEN: KARTU FASILITAS KESEHATAN (Warna Biru)
 // ============================================================================
 class FacilityCard extends StatelessWidget {
   final Profile profile;
@@ -272,7 +231,7 @@ class FacilityCard extends StatelessWidget {
 }
 
 // ============================================================================
-// 5. KOMPONEN: KARTU KONTAK (Warna Putih)
+// 4. KOMPONEN: KARTU KONTAK (Warna Putih)
 // ============================================================================
 class ContactCard extends StatelessWidget {
   final Profile profile;
@@ -349,7 +308,7 @@ class _ContactItem extends StatelessWidget {
 }
 
 // ============================================================================
-// 6. KOMPONEN: TOMBOL LOGOUT
+// 5. KOMPONEN: TOMBOL LOGOUT
 // ============================================================================
 class LogoutButton extends StatelessWidget {
   const LogoutButton({super.key});

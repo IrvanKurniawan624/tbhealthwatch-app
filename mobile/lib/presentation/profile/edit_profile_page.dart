@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../widgets/custom_bottom_nav.dart';
+import '../widgets/custom_app_bar.dart';
 
 // ============================================================================
 // 1. HALAMAN UTAMA (ROOT PAGE - STATEFUL)
@@ -99,7 +100,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const EditProfileAppBar(), // <-- Memanggil Header
+      // MENGGUNAKAN GLOBAL APP BAR (Dengan Tombol Back)
+      appBar: const CustomAppBar(showBackButton: true), 
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
@@ -148,47 +150,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
 }
 
 // ============================================================================
-// 2. KOMPONEN: APP BAR / HEADER
-// ============================================================================
-class EditProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
-  const EditProfileAppBar({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.white,
-      elevation: 0,
-      leading: const BackButton(color: Colors.black),
-      title: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Image.asset(
-            'assets/images/logo.png',
-            height: 24,
-            errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, color: Colors.blue),
-          ),
-          const SizedBox(width: 8),
-          const Text(
-            "TB Health Watch",
-            style: TextStyle(color: Color(0xFF0052CC), fontWeight: FontWeight.bold, fontSize: 16),
-          ),
-        ],
-      ),
-      actions: [
-        IconButton(
-          icon: const Icon(Icons.notifications_none, color: Colors.black87),
-          onPressed: () {},
-        ),
-      ],
-    );
-  }
-
-  @override
-  Size get preferredSize => const Size.fromHeight(kToolbarHeight);
-}
-
-// ============================================================================
-// 3. KOMPONEN: AVATAR EDIT
+// 2. KOMPONEN: AVATAR EDIT
 // ============================================================================
 class AvatarEditSection extends StatelessWidget {
   const AvatarEditSection({super.key});
@@ -231,7 +193,7 @@ class AvatarEditSection extends StatelessWidget {
 }
 
 // ============================================================================
-// 4. KOMPONEN: FORM INFORMASI UTAMA
+// 3. KOMPONEN: FORM INFORMASI UTAMA
 // ============================================================================
 class MainInformationForm extends StatelessWidget {
   final TextEditingController nameController;
@@ -310,7 +272,7 @@ class MainInformationForm extends StatelessWidget {
 }
 
 // ============================================================================
-// 5. KOMPONEN: FORM DETAIL KONTAK
+// 4. KOMPONEN: FORM DETAIL KONTAK
 // ============================================================================
 class ContactDetailForm extends StatelessWidget {
   final TextEditingController emailController;
@@ -355,7 +317,7 @@ class ContactDetailForm extends StatelessWidget {
 }
 
 // ============================================================================
-// 6. WIDGET BANTUAN: CUSTOM TEXT FIELD (Bisa Dipakai Berulang-ulang)
+// 5. WIDGET BANTUAN: CUSTOM TEXT FIELD (Bisa Dipakai Berulang-ulang)
 // ============================================================================
 class CustomTextField extends StatelessWidget {
   final String label;
@@ -393,7 +355,7 @@ class CustomTextField extends StatelessWidget {
 }
 
 // ============================================================================
-// 7. KOMPONEN: BANNER INFO (Kuning)
+// 6. KOMPONEN: BANNER INFO (Kuning)
 // ============================================================================
 class InfoBanner extends StatelessWidget {
   const InfoBanner({super.key});
@@ -424,7 +386,7 @@ class InfoBanner extends StatelessWidget {
 }
 
 // ============================================================================
-// 8. KOMPONEN: TOMBOL AKSI
+// 7. KOMPONEN: TOMBOL AKSI
 // ============================================================================
 class ActionButtons extends StatelessWidget {
   final VoidCallback onSave;
