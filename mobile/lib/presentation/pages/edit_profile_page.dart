@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
+import '../widgets/custom_bottom_nav.dart';
 
 // ============================================================================
 // 1. HALAMAN UTAMA (ROOT PAGE - STATEFUL)
@@ -140,7 +141,8 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ],
         ),
       ),
-      bottomNavigationBar: const EditProfileBottomNav(),
+      // MENGGUNAKAN GLOBAL BOTTOM NAV DI SINI
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
     );
   }
 }
@@ -452,30 +454,6 @@ class ActionButtons extends StatelessWidget {
           onPressed: onCancel,
           child: const Text("Batalkan", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)),
         ),
-      ],
-    );
-  }
-}
-
-// ============================================================================
-// 9. KOMPONEN: BOTTOM NAVIGATION BAR
-// ============================================================================
-class EditProfileBottomNav extends StatelessWidget {
-  const EditProfileBottomNav({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: 3,
-      selectedItemColor: const Color(0xFF0052CC),
-      unselectedItemColor: Colors.grey,
-      showUnselectedLabels: true,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Surveillance'),
-        BottomNavigationBarItem(icon: Icon(Icons.link), label: 'Monitoring'),
-        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Pasien'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
   }

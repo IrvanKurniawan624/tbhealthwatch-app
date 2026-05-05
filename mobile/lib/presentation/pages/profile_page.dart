@@ -3,6 +3,7 @@ import 'edit_profile_page.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../../data/repositories/mock_profile_repository.dart';
+import '../widgets/custom_bottom_nav.dart';
 
 // ============================================================================
 // 1. HALAMAN UTAMA (ROOT PAGE)
@@ -65,11 +66,11 @@ class _ProfilePageState extends State<ProfilePage> {
           return const SizedBox.shrink();
         },
       ),
-      bottomNavigationBar: const ProfileBottomNav(), // <-- Memanggil Bottom Nav
+      // MENGGUNAKAN GLOBAL BOTTOM NAV DI SINI
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
     );
   }
 }
-
 
 // ============================================================================
 // 2. KOMPONEN: APP BAR / HEADER
@@ -113,7 +114,6 @@ class ProfileAppBar extends StatelessWidget implements PreferredSizeWidget {
   @override
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
-
 
 // ============================================================================
 // 3. KOMPONEN: AVATAR & INFO SINGKAT
@@ -196,7 +196,6 @@ class AvatarSection extends StatelessWidget {
   }
 }
 
-
 // ============================================================================
 // 4. KOMPONEN: KARTU FASILITAS KESEHATAN (Warna Biru)
 // ============================================================================
@@ -271,7 +270,6 @@ class FacilityCard extends StatelessWidget {
     );
   }
 }
-
 
 // ============================================================================
 // 5. KOMPONEN: KARTU KONTAK (Warna Putih)
@@ -350,7 +348,6 @@ class _ContactItem extends StatelessWidget {
   }
 }
 
-
 // ============================================================================
 // 6. KOMPONEN: TOMBOL LOGOUT
 // ============================================================================
@@ -377,31 +374,6 @@ class LogoutButton extends StatelessWidget {
           ),
         ),
       ),
-    );
-  }
-}
-
-
-// ============================================================================
-// 7. KOMPONEN: BOTTOM NAVIGATION BAR
-// ============================================================================
-class ProfileBottomNav extends StatelessWidget {
-  const ProfileBottomNav({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return BottomNavigationBar(
-      type: BottomNavigationBarType.fixed,
-      currentIndex: 3, 
-      selectedItemColor: const Color(0xFF0052CC),
-      unselectedItemColor: Colors.grey,
-      showUnselectedLabels: true,
-      items: const [
-        BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Surveillance'),
-        BottomNavigationBarItem(icon: Icon(Icons.link), label: 'Monitoring'),
-        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Pasien'),
-        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-      ],
     );
   }
 }
