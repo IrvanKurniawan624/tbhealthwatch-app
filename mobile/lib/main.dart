@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'presentation/profile/profile_page.dart';
+import 'presentation/auth/login_page.dart'; // <-- Ini sudah saya ubah mengarah ke folder auth
 
 // ============================================================================
 // FILE UTAMA (ENTRY POINT)
@@ -40,9 +40,8 @@ class MyApp extends StatelessWidget {
         useMaterial3: true, 
       ),
       
-      // Mengarahkan aplikasi untuk langsung membuka halaman Profile 
-      // saat pertama kali dijalankan
-      home: const ProfilePage(), 
+      // MENGARAHKAN APLIKASI KE HALAMAN LOGIN SAAT PERTAMA DIBUKA
+      home: const LoginPage(), 
     );
   }
 }

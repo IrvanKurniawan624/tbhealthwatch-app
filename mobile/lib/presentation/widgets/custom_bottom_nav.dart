@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-// TODO: Nanti import halaman-halaman lain di sini (Surveillance, Monitoring, Pasien)
-// import '../pages/profile_page.dart';
+import '../profile/profile_page.dart';
+import '../monitoring/monitoring_page.dart';
 
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -15,31 +15,26 @@ class CustomBottomNav extends StatelessWidget {
     // Kalau user klik tab yang sedang aktif, tidak perlu melakukan apa-apa
     if (index == currentIndex) return;
 
-    // ----------------------------------------------------------------------
-    // ⚠️ TEMPAT MENYAMBUNGKAN HALAMAN NANTI
-    // Gunakan Navigator.pushReplacement agar halamannya ditimpa (tidak menumpuk)
-    // ----------------------------------------------------------------------
-    /*
+    // Ganti halaman dengan PushReplacement agar halamannya tidak menumpuk
     switch (index) {
-      case 0:
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => SurveillancePage()));
-        break;
-      case 1:
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => MonitoringPage()));
-        break;
+      // case 0:
+      //   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const SurveillancePage()));
+      //   break;
+      // case 1:
+      //   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TracingPage()));
+      //   break;
       case 2:
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => PasienPage()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MonitoringPage()));
         break;
       case 3:
-        // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => ProfilePage()));
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ProfilePage()));
         break;
+      default:
+        // Menampilkan notifikasi sementara jika halaman belum dibuat
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Halaman untuk tab index: $index belum tersedia")),
+        );
     }
-    */
-
-    // Untuk sementara, kita tampilkan notifikasi kecil saja jika halaman belum ada
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text("Pindah ke tab index: $index")),
-    );
   }
 
   @override
@@ -53,8 +48,8 @@ class CustomBottomNav extends StatelessWidget {
       onTap: (index) => _onItemTapped(context, index), // Panggil fungsi saat diklik
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.map_outlined), label: 'Surveillance'),
+        BottomNavigationBarItem(icon: Icon(Icons.account_tree_outlined), label: 'Tracing'),
         BottomNavigationBarItem(icon: Icon(Icons.link), label: 'Monitoring'),
-        BottomNavigationBarItem(icon: Icon(Icons.people), label: 'Pasien'),
         BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
       ],
     );
