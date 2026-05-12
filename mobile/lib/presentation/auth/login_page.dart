@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../monitoring/monitoring_page.dart'; // Import halaman tujuan setelah login
+import '../../core/api_client.dart';
+import '../monitoring/monitoring_page.dart';
 
 // ============================================================================
 // 1. HALAMAN UTAMA LOGIN
@@ -14,6 +15,7 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final TextEditingController _emailController = TextEditingController();
   final TextEditingController _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -22,17 +24,36 @@ class _LoginPageState extends State<LoginPage> {
     super.dispose();
   }
 
-  void _handleLogin() {
-    // ----------------------------------------------------------------------
-    // ⚠️ TEMPAT INTEGRASI API LOGIN NANTI
-    // Di sini kamu bisa memanggil AuthRepository untuk validasi ke backend
-    // ----------------------------------------------------------------------
-    
-    // Untuk sekarang, kita langsung navigasi ke halaman Monitoring
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const MonitoringPage()),
-    );
+  Future<void> _handleLogin() async {
+    if (_isLoading) return;
+    setState(() => _isLoading = true);
+    try {
+      final client = ApiClient();
+      final data = await client.post('/auth/login', {
+        'email': _emailController.text.trim(),
+        'password': _passwordController.text,
+      }) as Map<String, dynamic>;
+
+      await ApiClient.saveTokens(
+        data['accessToken'] as String,
+        data['refreshToken'] as String,
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const MonitoringPage()),
+        );
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Email atau password salah')),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -53,6 +74,7 @@ class _LoginPageState extends State<LoginPage> {
                 emailController: _emailController,
                 passwordController: _passwordController,
                 onLogin: _handleLogin,
+                isLoading: _isLoading,
               ),
               const SizedBox(height: 64),
               const LoginFooter(),
@@ -113,12 +135,14 @@ class LoginForm extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController passwordController;
   final VoidCallback onLogin;
+  final bool isLoading;
 
   const LoginForm({
     super.key,
     required this.emailController,
     required this.passwordController,
     required this.onLogin,
+    required this.isLoading,
   });
 
   @override
@@ -135,7 +159,7 @@ class LoginForm extends StatelessWidget {
           icon: Icons.badge_outlined,
         ),
         const SizedBox(height: 20),
-        
+
         // --- Input Password & Lupa Password ---
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -157,26 +181,32 @@ class LoginForm extends StatelessWidget {
           isPassword: true,
         ),
         const SizedBox(height: 32),
-        
+
         // --- Tombol Sign In ---
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
-            onPressed: onLogin,
+            onPressed: isLoading ? null : onLogin,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF0052CC), // Biru gelap
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Tombol membulat
               elevation: 0,
             ),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: const [
-                Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                SizedBox(width: 8),
-                Icon(Icons.arrow_forward, color: Colors.white, size: 20),
-              ],
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+                  )
+                : Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: const [
+                      Text("Sign In", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                      SizedBox(width: 8),
+                      Icon(Icons.arrow_forward, color: Colors.white, size: 20),
+                    ],
+                  ),
           ),
         ),
       ],
