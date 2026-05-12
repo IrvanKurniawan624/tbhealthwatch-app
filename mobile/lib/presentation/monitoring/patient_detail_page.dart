@@ -1,42 +1,92 @@
 import 'package:flutter/material.dart';
+import '../../core/api_client.dart';
 import '../../data/models/patient_model.dart';
+import '../../data/models/adherence_model.dart';
+import '../../data/repositories/api_patient_repository.dart';
+import '../../data/repositories/api_adherence_repository.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'edit_patient_page.dart'; // <-- Pastikan import ini ada
 
-class PatientDetailPage extends StatelessWidget {
+class PatientDetailPage extends StatefulWidget {
   final Patient patient;
 
   const PatientDetailPage({super.key, required this.patient});
 
   @override
+  State<PatientDetailPage> createState() => _PatientDetailPageState();
+}
+
+class _PatientDetailPageState extends State<PatientDetailPage> {
+  late Future<_DetailBundle> _future;
+  final _patientRepo = ApiPatientRepository(ApiClient());
+  final _adherenceRepo = ApiAdherenceRepository(ApiClient());
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _loadAll();
+  }
+
+  Future<_DetailBundle> _loadAll() async {
+    final now = DateTime.now();
+    final results = await Future.wait([
+      _patientRepo.getById(widget.patient.id),
+      _adherenceRepo.getSummary(widget.patient.id),
+      _adherenceRepo.getCalendar(widget.patient.id, now.year, now.month),
+    ]);
+    return _DetailBundle(
+      patient: results[0] as Patient,
+      summary: results[1] as AdherenceSummary,
+      calendar: results[2] as AdherenceCalendar,
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: const CustomAppBar(showBackButton: true), 
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            _buildHeaderInfo(context), // Menambahkan context agar bisa pindah halaman
-            const SizedBox(height: 32),
-            _buildTreatmentTarget(),
-            const SizedBox(height: 24),
-            _buildStatsAndAction(),
-            const SizedBox(height: 32),
-            _buildCalendarSection(),
-          ],
-        ),
+      appBar: const CustomAppBar(showBackButton: true),
+      body: FutureBuilder<_DetailBundle>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.hasError) {
+            return Center(child: Text('Gagal memuat data: ${snapshot.error}'));
+          }
+          final bundle = snapshot.data!;
+          return _buildContent(bundle);
+        },
       ),
       bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
+    );
+  }
+
+  Widget _buildContent(_DetailBundle bundle) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildHeaderInfo(context, bundle),
+          const SizedBox(height: 32),
+          _buildTreatmentTarget(bundle),
+          const SizedBox(height: 24),
+          _buildStatsAndAction(bundle),
+          const SizedBox(height: 32),
+          _buildCalendarSection(bundle),
+        ],
+      ),
     );
   }
 
   // =======================================================================
   // 1. KOMPONEN: HEADER INFO PASIEN
   // =======================================================================
-  Widget _buildHeaderInfo(BuildContext context) {
+  Widget _buildHeaderInfo(BuildContext context, _DetailBundle bundle) {
+    final patient = bundle.patient;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -75,17 +125,16 @@ class PatientDetailPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 12),
-        _buildInfoRow("Patient ID:", patient.id, isHighlight: true),
+        _buildInfoRow("Patient ID:", patient.nik ?? patient.id, isHighlight: true),
         const SizedBox(height: 4),
-        _buildInfoRow("No Telp:", "08123323712"),
+        _buildInfoRow("No Telp:", patient.phone ?? '-'),
         const SizedBox(height: 4),
-        _buildInfoRow("Wilayah:", "Sukolilo"),
+        _buildInfoRow("Wilayah:", patient.regionName ?? '-'),
         const SizedBox(height: 4),
-        _buildInfoRow("Tanggal Lahir:", "17 Agustus 1989"),
+        _buildInfoRow("Tanggal Lahir:", patient.dob ?? '-'),
         const SizedBox(height: 20),
         Center(
           child: ElevatedButton.icon(
-            // --- SEKARANG TOMBOLNYA SUDAH BISA DIPENCET ---
             onPressed: () {
               Navigator.push(
                 context,
@@ -94,7 +143,6 @@ class PatientDetailPage extends StatelessWidget {
                 ),
               );
             },
-            // ----------------------------------------------
             icon: const Icon(Icons.edit_document, size: 16, color: Colors.white),
             label: const Text("EDIT DATA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
@@ -131,7 +179,9 @@ class PatientDetailPage extends StatelessWidget {
   // =======================================================================
   // 2. KOMPONEN: TARGET PENGOBATAN
   // =======================================================================
-  Widget _buildTreatmentTarget() {
+  Widget _buildTreatmentTarget(_DetailBundle bundle) {
+    final summary = bundle.summary;
+    final patient = bundle.patient;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -151,22 +201,22 @@ class PatientDetailPage extends StatelessWidget {
             child: Stack(
               fit: StackFit.expand,
               children: [
-                const CircularProgressIndicator(
-                  value: 0.84,
+                CircularProgressIndicator(
+                  value: summary.percentage / 100,
                   strokeWidth: 16,
-                  backgroundColor: Color(0xFFEBF5FF),
-                  color: Color(0xFF0052CC),
+                  backgroundColor: const Color(0xFFEBF5FF),
+                  color: const Color(0xFF0052CC),
                 ),
                 Column(
                   mainAxisAlignment: MainAxisAlignment.center,
-                  children: const [
+                  children: [
                     Text(
-                      "84%",
-                      style: TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                      "${summary.percentage.toStringAsFixed(0)}%",
+                      style: const TextStyle(fontSize: 40, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
                     ),
                     Text(
-                      "TARGET 95%",
-                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0052CC)),
+                      "TARGET ${summary.target}%",
+                      style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0052CC)),
                     ),
                   ],
                 ),
@@ -181,7 +231,8 @@ class PatientDetailPage extends StatelessWidget {
   // =======================================================================
   // 3. KOMPONEN: STATISTIK & TOMBOL CATAT
   // =======================================================================
-  Widget _buildStatsAndAction() {
+  Widget _buildStatsAndAction(_DetailBundle bundle) {
+    final summary = bundle.summary;
     return Column(
       children: [
         Row(
@@ -189,18 +240,20 @@ class PatientDetailPage extends StatelessWidget {
           children: [
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text("DOSIS DIAMBIL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                SizedBox(height: 4),
-                Text("25/30", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+              children: [
+                const Text("DOSIS DIAMBIL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                const SizedBox(height: 4),
+                Text("${summary.dosesTaken}/${summary.dosesTotal}",
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
               ],
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text("STREAK", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
-                SizedBox(height: 4),
-                Text("2 Days", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+              children: [
+                const Text("STREAK", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                const SizedBox(height: 4),
+                Text("${summary.streakDays} Days",
+                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
               ],
             ),
           ],
@@ -209,7 +262,28 @@ class PatientDetailPage extends StatelessWidget {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () {},
+            onPressed: () async {
+              final today = DateTime.now();
+              final logDate =
+                  '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
+              try {
+                await _adherenceRepo.log(widget.patient.id, logDate, 'taken');
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Obat berhasil dicatat')),
+                  );
+                  setState(() {
+                    _future = _loadAll();
+                  });
+                }
+              } catch (e) {
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Gagal mencatat: $e')),
+                  );
+                }
+              }
+            },
             icon: const Icon(Icons.add_circle, color: Colors.white),
             label: const Text("Catat Obat Sekarang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
             style: ElevatedButton.styleFrom(
@@ -226,7 +300,17 @@ class PatientDetailPage extends StatelessWidget {
   // =======================================================================
   // 4. KOMPONEN: KALENDER KEPATUHAN
   // =======================================================================
-  Widget _buildCalendarSection() {
+  Widget _buildCalendarSection(_DetailBundle bundle) {
+    final calendar = bundle.calendar;
+    final monthNames = [
+      'Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni',
+      'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
+    ];
+    final monthLabel = '${monthNames[calendar.month - 1]} ${calendar.year}';
+
+    final takenCount = calendar.days.where((d) => d.status == 'taken').length;
+    final missedCount = calendar.days.where((d) => d.status == 'missed').length;
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -241,7 +325,8 @@ class PatientDetailPage extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text("Oktober 2023", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF045D5D))),
+              Text(monthLabel,
+                  style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF045D5D))),
               Row(
                 children: const [
                   Icon(Icons.chevron_left, color: Color(0xFF045D5D)),
@@ -252,7 +337,7 @@ class PatientDetailPage extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          _buildCalendarGrid(),
+          _buildCalendarGrid(bundle),
           const SizedBox(height: 20),
           const Divider(),
           const SizedBox(height: 12),
@@ -260,17 +345,19 @@ class PatientDetailPage extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               Row(
-                children: const [
-                  Icon(Icons.circle, size: 8, color: Color(0xFF10B981)),
-                  SizedBox(width: 4),
-                  Text("9 Hari Patuh", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                children: [
+                  const Icon(Icons.circle, size: 8, color: Color(0xFF10B981)),
+                  const SizedBox(width: 4),
+                  Text("$takenCount Hari Patuh",
+                      style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
                 ],
               ),
               Row(
-                children: const [
-                  Icon(Icons.circle, size: 8, color: Color(0xFFEF4444)),
-                  SizedBox(width: 4),
-                  Text("2 Hari Terlewat", style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
+                children: [
+                  const Icon(Icons.circle, size: 8, color: Color(0xFFEF4444)),
+                  const SizedBox(width: 4),
+                  Text("$missedCount Hari Terlewat",
+                      style: const TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.bold)),
                 ],
               ),
             ],
@@ -280,23 +367,16 @@ class PatientDetailPage extends StatelessWidget {
     );
   }
 
-  Widget _buildCalendarGrid() {
-    final List<String> days = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
-    final List<Map<String, dynamic>> dates = [
-      {'date': '27', 'status': 0}, {'date': '28', 'status': 0}, {'date': '29', 'status': 0}, {'date': '30', 'status': 0},
-      {'date': '1', 'status': 2}, {'date': '2', 'status': 2}, {'date': '3', 'status': 3},
-      {'date': '4', 'status': 2}, {'date': '5', 'status': 2}, {'date': '6', 'status': 2}, {'date': '7', 'status': 2},
-      {'date': '8', 'status': 3}, {'date': '9', 'status': 2}, {'date': '10', 'status': 2},
-      {'date': '11', 'status': 4}, {'date': '12', 'status': 1}, {'date': '13', 'status': 1}, {'date': '14', 'status': 1},
-      {'date': '15', 'status': 1}, {'date': '16', 'status': 1}, {'date': '17', 'status': 1},
-    ];
+  Widget _buildCalendarGrid(_DetailBundle bundle) {
+    final List<String> dayHeaders = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
+    final days = bundle.calendar.days;
 
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: days.map((day) => SizedBox(
-            width: 30, 
+          children: dayHeaders.map((day) => SizedBox(
+            width: 30,
             child: Center(child: Text(day, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey))),
           )).toList(),
         ),
@@ -310,35 +390,34 @@ class PatientDetailPage extends StatelessWidget {
             crossAxisSpacing: 8,
             childAspectRatio: 0.8,
           ),
-          itemCount: dates.length,
+          itemCount: days.length,
           itemBuilder: (context, index) {
-            final dateData = dates[index];
-            return _buildDateItem(dateData['date'], dateData['status']);
+            final day = days[index];
+            final parts = day.date.split('-');
+            final dayNum = parts.length >= 3 ? parts[2] : day.date;
+            return _buildDateItem(dayNum, day.status);
           },
         ),
       ],
     );
   }
 
-  Widget _buildDateItem(String date, int status) {
-    Color bgColor = Colors.transparent;
-    Color textColor = Colors.black87;
-    Widget? badge;
-
-    if (status == 0) {
-      textColor = Colors.grey[300]!;
-    } else if (status == 2) {
-      bgColor = const Color(0xFFEBF5FF);
-      textColor = const Color(0xFF045D5D);
-      badge = const Icon(Icons.check_circle, size: 10, color: Color(0xFF10B981));
-    } else if (status == 3) {
-      bgColor = const Color(0xFFFFE4E6);
-      textColor = const Color(0xFFEF4444);
-      badge = const Icon(Icons.cancel, size: 10, color: Color(0xFFEF4444));
-    } else if (status == 4) {
-      bgColor = const Color(0xFF045D5D);
-      textColor = Colors.white;
+  ({Color bg, IconData? icon, Color? iconColor}) _statusStyle(String status) {
+    switch (status) {
+      case 'taken':
+        return (bg: const Color(0xFFEBF5FF), icon: Icons.check, iconColor: const Color(0xFF0052CC));
+      case 'missed':
+        return (bg: const Color(0xFFFFE4E6), icon: Icons.close, iconColor: Colors.red);
+      case 'partial':
+        return (bg: const Color(0xFFFFF7E6), icon: Icons.remove, iconColor: Colors.orange);
+      default:
+        return (bg: Colors.transparent, icon: null, iconColor: null);
     }
+  }
+
+  Widget _buildDateItem(String date, String status) {
+    final style = _statusStyle(status);
+    final textColor = status == 'none' ? Colors.grey[400]! : Colors.black87;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -347,7 +426,7 @@ class PatientDetailPage extends StatelessWidget {
           width: 28,
           height: 28,
           decoration: BoxDecoration(
-            color: bgColor,
+            color: style.bg,
             shape: BoxShape.circle,
           ),
           child: Center(
@@ -358,8 +437,24 @@ class PatientDetailPage extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 2),
-        SizedBox(height: 10, child: badge),
+        SizedBox(
+          height: 10,
+          child: style.icon != null
+              ? Icon(style.icon, size: 10, color: style.iconColor)
+              : null,
+        ),
       ],
     );
   }
+}
+
+class _DetailBundle {
+  final Patient patient;
+  final AdherenceSummary summary;
+  final AdherenceCalendar calendar;
+  _DetailBundle({
+    required this.patient,
+    required this.summary,
+    required this.calendar,
+  });
 }
