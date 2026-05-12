@@ -1,22 +1,15 @@
-// ============================================================================
-// MODEL: PROFILE
-// File ini mendefinisikan cetak biru (struktur data) untuk Profil Tenaga Medis.
-// ============================================================================
-
 class Profile {
-  // Variabel dibuat 'final' karena data model di Flutter idealnya bersifat 
-  // immutable (tidak bisa diubah secara sembarangan setelah dibuat).
-  final String name;
-  final String role;
+  final String name;           // maps to backend's fullName
+  final String role;           // maps to backend's specialization
   final String facilityName;
   final String facilityRole;
   final String assignmentLocation;
-  final String? wilayah;
+  final String? wilayah;       // maps to backend's regionName
+  final String? regionId;      // UUID — needed for PUT /profile/me
   final String email;
   final String phone;
   final String address;
 
-  // Constructor utama untuk inisialisasi data
   Profile({
     required this.name,
     required this.role,
@@ -24,43 +17,36 @@ class Profile {
     required this.facilityRole,
     required this.assignmentLocation,
     this.wilayah,
+    this.regionId,
     required this.email,
     required this.phone,
     required this.address,
   });
 
-  // --------------------------------------------------------------------------
-  // ⚠️ PERSIAPAN UNTUK INTEGRASI API BACKEND NANTI
-  // --------------------------------------------------------------------------
-
-  // 1. fromJson: Mengubah format JSON (dari API) menjadi object Profile di Flutter.
-  // Dilengkapi dengan '??' (fallback) agar aplikasi tidak crash jika ada data null dari server.
   factory Profile.fromJson(Map<String, dynamic> json) {
     return Profile(
-      name: json['name'] ?? '',
-      role: json['role'] ?? '',
-      facilityName: json['facilityName'] ?? '',
-      facilityRole: json['facilityRole'] ?? '',
-      assignmentLocation: json['assignmentLocation'] ?? '',
-      wilayah: json['wilayah'] as String?,
-      email: json['email'] ?? '',
-      phone: json['phone'] ?? '',
-      address: json['address'] ?? '',
+      name: json['fullName'] as String? ?? '',
+      role: json['specialization'] as String? ?? '',
+      facilityName: json['facilityName'] as String? ?? '',
+      facilityRole: json['facilityRole'] as String? ?? '',
+      assignmentLocation: json['assignmentLocation'] as String? ?? '',
+      wilayah: json['regionName'] as String?,
+      regionId: json['regionId']?.toString(),
+      email: json['email'] as String? ?? '',
+      phone: json['phone'] as String? ?? '',
+      address: json['address'] as String? ?? '',
     );
   }
 
-  // 2. toJson: Mengubah object Profile menjadi JSON.
-  // Sangat berguna nanti saat kamu menekan tombol "Simpan Perubahan" di Edit Profile
-  // untuk mengirim data yang sudah di-update ke database server.
+  // Sends the keys that UpdateProfileDto expects on the backend
   Map<String, dynamic> toJson() {
     return {
-      'name': name,
-      'role': role,
+      'fullName': name,
+      'specialization': role,
       'facilityName': facilityName,
       'facilityRole': facilityRole,
       'assignmentLocation': assignmentLocation,
-      'wilayah': wilayah,
-      'email': email,
+      if (regionId != null) 'regionId': regionId,
       'phone': phone,
       'address': address,
     };
