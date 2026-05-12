@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'edit_profile_page.dart';
+import '../../core/api_client.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
-import '../../data/repositories/mock_profile_repository.dart';
+import '../../data/repositories/api_profile_repository.dart';
+import '../auth/login_page.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../widgets/custom_app_bar.dart';
 
@@ -18,13 +20,7 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // ----------------------------------------------------------------------
-  // ⚠️ TEMPAT MENGUBAH KE BACKEND ASLI NANTI
-  // Untuk saat ini, kita pakai MockProfileRepository.
-  // Nanti kalau backend selesai, cukup ubah baris ini menjadi:
-  // final IProfileRepository _repository = ApiProfileRepository(baseUrl: 'https://api-kalian.com');
-  // ----------------------------------------------------------------------
-  final IProfileRepository _repository = MockProfileRepository();
+  final _repository = ApiProfileRepository(ApiClient());
   late Future<Profile> _profileFuture;
 
   @override
@@ -318,7 +314,19 @@ class LogoutButton extends StatelessWidget {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton.icon(
-        onPressed: () {},
+        onPressed: () async {
+          try {
+            await ApiClient().post('/auth/logout');
+          } catch (_) {}
+          await ApiClient.clearTokens();
+          if (context.mounted) {
+            Navigator.pushAndRemoveUntil(
+              context,
+              MaterialPageRoute(builder: (_) => const LoginPage()),
+              (_) => false,
+            );
+          }
+        },
         icon: const Icon(Icons.logout, color: Colors.red),
         label: const Text(
           "Keluar",

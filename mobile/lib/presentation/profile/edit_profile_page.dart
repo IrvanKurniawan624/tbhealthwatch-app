@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../core/api_client.dart';
 import '../../data/models/profile_model.dart';
 import '../../data/repositories/profile_repository.dart';
 import '../widgets/custom_bottom_nav.dart';
@@ -28,29 +29,33 @@ class _EditProfilePageState extends State<EditProfilePage> {
   late TextEditingController _addressController;
 
   String? _selectedWilayah;
-  // TODO: fetch from /api/regions once auth is wired
-  final List<String> _wilayahList = [
-    'Asemrowo', 'Benowo', 'Bubutan', 'Bulak', 'Dukuh Pakis',
-    'Gayungan', 'Genteng', 'Gubeng', 'Gunung Anyar', 'Jambangan',
-    'Karang Pilang', 'Kenjeran', 'Krembangan', 'Lakarsantri', 'Mulyorejo',
-    'Pabean Cantian', 'Pakal', 'Rungkut', 'Sambikerep', 'Sawahan',
-    'Semampir', 'Simokerto', 'Sukolilo', 'Sukomanunggal', 'Tambaksari',
-    'Tandes', 'Tegalsari', 'Tenggilis Mejoyo', 'Wiyung', 'Wonocolo',
-    'Wonokromo',
-  ];
+  List<String> _wilayahList = [];
+  List<Map<String, dynamic>> _regionsData = [];
 
   @override
   void initState() {
     super.initState();
-    // Mengisi form awal dengan data dari profile yang diklik
     _nameController = TextEditingController(text: widget.profile.name);
     _roleController = TextEditingController(text: widget.profile.role);
     _locationController = TextEditingController(text: widget.profile.assignmentLocation);
     _emailController = TextEditingController(text: widget.profile.email);
     _phoneController = TextEditingController(text: widget.profile.phone);
     _addressController = TextEditingController(text: widget.profile.address.replaceAll('\n', ' '));
-    
+
     _selectedWilayah = widget.profile.wilayah ?? 'Gubeng';
+    _loadRegions();
+  }
+
+  Future<void> _loadRegions() async {
+    try {
+      final data = await ApiClient().get('/regions') as List;
+      if (mounted) {
+        setState(() {
+          _regionsData = data.cast<Map<String, dynamic>>();
+          _wilayahList = _regionsData.map((r) => r['name'] as String).toList();
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -70,6 +75,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
   }
 
   Future<void> _doSave() async {
+    final regionId = _regionsData
+        .where((r) => r['name'] == _selectedWilayah)
+        .map((r) => r['id'] as String)
+        .firstOrNull;
+
     final updatedProfile = Profile(
       name: _nameController.text,
       role: _roleController.text,
@@ -77,6 +87,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
       facilityRole: widget.profile.facilityRole,
       assignmentLocation: _locationController.text,
       wilayah: _selectedWilayah,
+      regionId: regionId,
       email: _emailController.text,
       phone: _phoneController.text,
       address: _addressController.text,
@@ -84,9 +95,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     if (widget.repository != null) {
       try {
         await widget.repository!.updateProfileData(updatedProfile);
-      } catch (_) {
-        // error handling deferred until auth is wired
-      }
+      } catch (_) {}
     }
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(

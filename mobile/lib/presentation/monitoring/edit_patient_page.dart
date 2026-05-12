@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import '../../core/api_client.dart';
 import '../../data/models/patient_model.dart';
+import '../../data/repositories/api_patient_repository.dart';
 
 // ============================================================================
 // 1. HALAMAN EDIT PASIEN
@@ -21,19 +23,42 @@ class _EditPatientPageState extends State<EditPatientPage> {
   late TextEditingController _wilayahController;
   late TextEditingController _phoneController;
   late TextEditingController _idController;
-  
+
   String _selectedPhase = '2'; // Default sesuai figma
+
+  final _repo = ApiPatientRepository(ApiClient());
+  bool _isSaving = false;
+  List<Map<String, dynamic>> _regions = [];
+  String? _selectedRegionId;
 
   @override
   void initState() {
     super.initState();
-    // Mengisi form dengan data pasien sesuai gambar Figma
-    _nameController = TextEditingController(text: "Daffu"); 
-    _dobController = TextEditingController(text: "17 - agustus - 1945"); 
-    _wilayahController = TextEditingController(text: "Gubeng"); 
-    _phoneController = TextEditingController(text: "0821323299878"); 
+    // Pre-fill from the patient passed in
+    _nameController = TextEditingController(text: widget.patient.name);
+    _dobController = TextEditingController(text: widget.patient.dob ?? '');
+    _wilayahController = TextEditingController(text: widget.patient.regionName ?? '');
+    _phoneController = TextEditingController(text: widget.patient.phone ?? '');
     // ID menggunakan data asli yang dioper dari halaman sebelumnya
-    _idController = TextEditingController(text: widget.patient.id); 
+    _idController = TextEditingController(text: widget.patient.id);
+    _loadRegions();
+  }
+
+  Future<void> _loadRegions() async {
+    try {
+      final data = await ApiClient().get('/regions') as List;
+      if (mounted) {
+        setState(() {
+          _regions = data.cast<Map<String, dynamic>>();
+          // Pre-select region matching the patient's regionName
+          final match = _regions.firstWhere(
+            (r) => r['name'] == widget.patient.regionName,
+            orElse: () => {},
+          );
+          _selectedRegionId = match['id'] as String?;
+        });
+      }
+    } catch (_) {}
   }
 
   @override
@@ -74,63 +99,94 @@ class _EditPatientPageState extends State<EditPatientPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Edit Data Pasien baru", 
-              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87)
+              "Edit Data Pasien baru",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 16),
             const Text(
-              "Informasi data", 
-              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87)
+              "Informasi data",
+              style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 8),
             const Divider(thickness: 1, color: Colors.black12),
             const SizedBox(height: 12),
-            
+
             // --- Form Inputs ---
             _buildLabel("Name"),
             _buildTextField(_nameController),
-            
+
             _buildLabel("Tanggal lahir"),
             _buildTextField(_dobController),
-            
+
             _buildLabel("Wilayah"),
-            _buildTextField(_wilayahController),
-            
+            _buildRegionDropdown(),
+
             _buildLabel("Nomor Telefon"),
             _buildTextField(_phoneController),
-            
+
             _buildLabel("Id"),
             _buildTextField(_idController, isEnabled: false), // Kotak ID abu-abu
-            
+
             _buildLabel("Phase"),
             _buildDropdown(),
-            
+
             const SizedBox(height: 48),
-            
+
             // --- Tombol Edit ---
             Center(
               child: SizedBox(
                 width: 200,
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context); // Tutup halaman
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Data pasien berhasil diperbarui")),
-                    );
-                  },
+                  onPressed: _isSaving
+                      ? null
+                      : () async {
+                          setState(() => _isSaving = true);
+                          try {
+                            await _repo.update(widget.patient.id, {
+                              'fullName': _nameController.text.trim(),
+                              if (_dobController.text.trim().isNotEmpty)
+                                'dob': _dobController.text.trim(),
+                              'phone': _phoneController.text.trim(),
+                              if (_selectedRegionId != null) 'regionId': _selectedRegionId,
+                            });
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(content: Text('Data pasien berhasil diperbarui')),
+                              );
+                              Navigator.pop(context, true);
+                            }
+                          } catch (e) {
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Gagal menyimpan: $e')),
+                              );
+                            }
+                          } finally {
+                            if (mounted) setState(() => _isSaving = false);
+                          }
+                        },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF0052CC),
                     padding: const EdgeInsets.symmetric(vertical: 16),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)), // Agak membulat
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: const [
-                      Text("EDIT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, color: Colors.white, size: 16),
-                    ],
-                  ),
+                  child: _isSaving
+                      ? const SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Text("EDIT", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 12)),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward, color: Colors.white, size: 16),
+                          ],
+                        ),
                 ),
               ),
             ),
@@ -175,6 +231,33 @@ class _EditPatientPageState extends State<EditPatientPage> {
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
           borderSide: const BorderSide(color: Color(0xFF0052CC)),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRegionDropdown() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(6),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: _selectedRegionId,
+          isExpanded: true,
+          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
+          hint: Text(
+            _wilayahController.text.isNotEmpty ? _wilayahController.text : 'Pilih wilayah',
+            style: const TextStyle(fontSize: 14, color: Colors.black87),
+          ),
+          items: _regions.map((r) => DropdownMenuItem<String>(
+            value: r['id'] as String,
+            child: Text(r['name'] as String, style: const TextStyle(fontSize: 14, color: Colors.black87)),
+          )).toList(),
+          onChanged: (val) => setState(() => _selectedRegionId = val),
         ),
       ),
     );

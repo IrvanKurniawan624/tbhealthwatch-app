@@ -1,10 +1,8 @@
 import 'package:flutter/material.dart';
-import 'presentation/auth/login_page.dart'; // <-- Ini sudah saya ubah mengarah ke folder auth
+import 'core/api_client.dart';
+import 'presentation/auth/login_page.dart';
+import 'presentation/monitoring/monitoring_page.dart';
 
-// ============================================================================
-// FILE UTAMA (ENTRY POINT)
-// Di sinilah aplikasi TB Health Watch pertama kali dijalankan.
-// ============================================================================
 void main() {
   runApp(const MyApp());
 }
@@ -15,33 +13,26 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'TB Health Watch',
-      
-      // Menghilangkan pita merah tulisan "DEBUG" di pojok kanan atas
-      debugShowCheckedModeBanner: false, 
-      
-      // Mengatur tema global aplikasi (Warna utama, background, dll)
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        // Menggunakan colorScheme dengan warna biru khas desain Figma kalian
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF0052CC), 
-        ),
+            seedColor: const Color(0xFF0052CC)),
+        useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
-        
-        // Mengatur tema AppBar secara global agar kita tidak perlu 
-        // menulis background putih berulang-ulang di setiap halaman
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.white,
-          elevation: 0,
-          iconTheme: IconThemeData(color: Colors.black87),
-        ),
-        
-        // Mengaktifkan desain komponen Material 3 yang lebih modern
-        useMaterial3: true, 
       ),
-      
-      // MENGARAHKAN APLIKASI KE HALAMAN LOGIN SAAT PERTAMA DIBUKA
-      home: const LoginPage(), 
+      home: FutureBuilder<bool>(
+        future: ApiClient.hasToken(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState != ConnectionState.done) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          return snapshot.data == true
+              ? const MonitoringPage()
+              : const LoginPage();
+        },
+      ),
     );
   }
 }
