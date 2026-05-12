@@ -8,7 +8,7 @@ class UnauthorizedException implements Exception {
 }
 
 class ApiClient {
-  static const String _baseUrl = 'http://10.0.2.2:5000/api';
+  static const String _baseUrl = 'http://localhost:5000/api';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
 
