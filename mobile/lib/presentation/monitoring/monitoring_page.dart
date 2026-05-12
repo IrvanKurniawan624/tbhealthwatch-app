@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
+import '../../core/api_client.dart';
 import '../../data/models/patient_model.dart';
 import '../../data/repositories/patient_repository.dart';
-import '../../data/repositories/mock_patient_repository.dart';
+import '../../data/repositories/api_patient_repository.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'patient_detail_page.dart'; // <-- Import halaman detail yang baru dibuat
@@ -22,7 +23,7 @@ class _MonitoringPageState extends State<MonitoringPage> {
   // ⚠️ TEMPAT MENGUBAH KE BACKEND ASLI NANTI
   // Untuk saat ini pakai MockPatientRepository (Dummy Data).
   // ----------------------------------------------------------------------
-  final IPatientRepository _repository = MockPatientRepository();
+  final _repository = ApiPatientRepository(ApiClient());
   late Future<List<Patient>> _patientsFuture;
 
   @override
