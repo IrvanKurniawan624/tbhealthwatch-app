@@ -8,14 +8,6 @@ erDiagram
         text code
         text kota
     }
-    medications {
-        uuid id PK
-        text code
-        text name
-        int default_dosage_mg
-        text unit
-        text category
-    }
     users {
         uuid id PK
         text email
@@ -44,7 +36,7 @@ erDiagram
         text nik
         text full_name
         date dob
-        char sex
+        char gender
         text phone
         text address
         uuid region_id FK
@@ -53,7 +45,7 @@ erDiagram
         timestamptz registered_at
         timestamptz deleted_at
     }
-    patient_treatments {
+    medication_adherence {
         uuid id PK
         uuid patient_id FK
         date phase_1_start_date
@@ -65,28 +57,13 @@ erDiagram
         text notes
         uuid created_by_user_id FK
     }
-    daily_medication_targets {
+    adherence_logs {
         uuid id PK
-        date target_date
-        text notes
-        uuid created_by_user_id FK
-    }
-    daily_medication_target_items {
-        uuid id PK
-        uuid target_id FK
-        uuid medication_id FK
-        int dosage_mg
-        smallint sequence
-    }
-    patient_medication_logs {
-        uuid id PK
-        uuid patient_treatment_id FK
+        uuid medication_adherence_id FK
         date log_date
-        uuid target_item_id FK
-        uuid medication_id FK
-        int dosage_mg
+        text phase
         text status
-        timestamptz taken_at
+        text notes
         uuid recorded_by_user_id FK
     }
     notifications {
@@ -110,18 +87,13 @@ erDiagram
     }
 
     users ||--o{ patients : "registers"
-    users ||--o{ patient_treatments : "creates"
-    users ||--o{ daily_medication_targets : "creates"
-    users ||--o{ patient_medication_logs : "records"
+    users ||--o{ medication_adherence : "creates"
+    users ||--o{ adherence_logs : "records"
     users ||--o{ notifications : "receives"
     users ||--o{ audit_logs : "performs"
     users ||--o{ refresh_tokens : "has"
     users }o--|| regions : "assigned to"
     patients }o--|| regions : "located in"
-    patients ||--o{ patient_treatments : "has"
-    patient_treatments ||--o{ patient_medication_logs : "has"
-    daily_medication_targets ||--o{ daily_medication_target_items : "contains"
-    daily_medication_target_items }o--|| medications : "references"
-    patient_medication_logs }o--|| daily_medication_target_items : "from"
-    patient_medication_logs }o--|| medications : "tracks"
+    patients ||--o{ medication_adherence : "has"
+    medication_adherence ||--o{ adherence_logs : "has"
 ```
