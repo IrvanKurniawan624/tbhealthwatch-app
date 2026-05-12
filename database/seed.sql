@@ -42,17 +42,6 @@ INSERT INTO regions (name, code, kota) VALUES
 ON CONFLICT (code) DO NOTHING;
 
 -- =============================================================================
--- Medications: 5 first-line TB drugs
--- =============================================================================
-INSERT INTO medications (code, name, default_dosage_mg, unit, category) VALUES
-    ('R', 'Rifampicin',    600,  'mg', 'first_line'),
-    ('H', 'Isoniazid',     300,  'mg', 'first_line'),
-    ('Z', 'Pyrazinamide',  1500, 'mg', 'first_line'),
-    ('E', 'Ethambutol',    1200, 'mg', 'first_line'),
-    ('S', 'Streptomycin',  750,  'mg', 'first_line')
-ON CONFLICT (code) DO NOTHING;
-
--- =============================================================================
 -- Demo admin user (matches Flutter MockProfileRepository)
 -- =============================================================================
 INSERT INTO users (

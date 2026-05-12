@@ -6,7 +6,7 @@ public class Patient
     public string? Nik { get; set; }
     public string FullName { get; set; } = string.Empty;
     public DateOnly? Dob { get; set; }
-    public char? Sex { get; set; }
+    public char? Gender { get; set; }
     public string? Phone { get; set; }
     public string? Address { get; set; }
     public Guid? RegionId { get; set; }
@@ -18,5 +18,5 @@ public class Patient
     public DateTime? DeletedAt { get; set; }
 
     public Region? Region { get; set; }
-    public ICollection<PatientTreatment> Treatments { get; set; } = new List<PatientTreatment>();
+    public ICollection<MedicationAdherence> MedicationAdherences { get; set; } = new List<MedicationAdherence>();
 }

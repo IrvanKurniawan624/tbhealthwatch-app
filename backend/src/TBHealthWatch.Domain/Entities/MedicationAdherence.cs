@@ -1,6 +1,6 @@
 namespace TBHealthWatch.Domain.Entities;
 
-public class PatientTreatment
+public class MedicationAdherence
 {
     public Guid Id { get; set; }
     public Guid PatientId { get; set; }
@@ -16,4 +16,5 @@ public class PatientTreatment
     public DateTime UpdatedAt { get; set; }
 
     public Patient? Patient { get; set; }
+    public ICollection<AdherenceLog> AdherenceLogs { get; set; } = new List<AdherenceLog>();
 }

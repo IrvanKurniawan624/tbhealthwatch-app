@@ -4,7 +4,6 @@
 -- Apply with: psql <connection_string> -f database/migrations/001_init.sql
 -- =============================================================================
 
--- Enable pgcrypto for gen_random_uuid()
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
 -- =============================================================================
@@ -20,22 +19,7 @@ CREATE TABLE regions (
 );
 
 -- =============================================================================
--- Table 2: medications
--- =============================================================================
-CREATE TABLE medications (
-    id                 UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    code               TEXT        NOT NULL UNIQUE,   -- e.g. 'R', 'H', 'Z', 'E', 'S'
-    name               TEXT        NOT NULL,
-    default_dosage_mg  INTEGER,
-    unit               TEXT        NOT NULL DEFAULT 'mg',
-    category           TEXT        NOT NULL CHECK (category IN ('first_line', 'second_line')),
-    notes              TEXT,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
-);
-
--- =============================================================================
--- Table 3: users
+-- Table 2: users
 -- =============================================================================
 CREATE TABLE users (
     id                  UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -57,7 +41,7 @@ CREATE TABLE users (
 );
 
 -- =============================================================================
--- Table 4: refresh_tokens
+-- Table 3: refresh_tokens
 -- =============================================================================
 CREATE TABLE refresh_tokens (
     id          UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -69,14 +53,14 @@ CREATE TABLE refresh_tokens (
 );
 
 -- =============================================================================
--- Table 5: patients
+-- Table 4: patients
 -- =============================================================================
 CREATE TABLE patients (
     id                    UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     nik                   TEXT        NOT NULL UNIQUE,
     full_name             TEXT        NOT NULL,
     dob                   DATE        NOT NULL,
-    sex                   CHAR(1)     NOT NULL CHECK (sex IN ('M', 'F')),
+    gender                   CHAR(1)     NOT NULL CHECK (gender IN ('M', 'F')),
     phone                 TEXT,
     address               TEXT,
     region_id             UUID        REFERENCES regions(id) ON DELETE SET NULL,
@@ -89,9 +73,11 @@ CREATE TABLE patients (
 );
 
 -- =============================================================================
--- Table 6: patient_treatments
+-- Table 5: medication_adherence
+-- Stores the two-phase TB treatment plan per patient.
+-- One active row per patient at a time (unique partial index below).
 -- =============================================================================
-CREATE TABLE patient_treatments (
+CREATE TABLE medication_adherence (
     id                       UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
     patient_id               UUID        NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
     phase_1_start_date       DATE        NOT NULL,
@@ -120,9 +106,30 @@ CREATE TABLE patient_treatments (
 );
 
 -- Only one active treatment per patient
-CREATE UNIQUE INDEX idx_patient_treatments_one_active
-    ON patient_treatments (patient_id)
+CREATE UNIQUE INDEX idx_medication_adherence_one_active
+    ON medication_adherence (patient_id)
     WHERE status = 'active';
+
+-- =============================================================================
+-- Table 6: adherence_logs
+-- One row per patient per day. Records whether the patient took their
+-- medication. Phase ('phase_1' / 'phase_2') is informational text stored
+-- at log time so the graph can break down adherence by treatment phase.
+-- =============================================================================
+CREATE TABLE adherence_logs (
+    id                      UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
+    medication_adherence_id UUID        NOT NULL REFERENCES medication_adherence(id) ON DELETE CASCADE,
+    log_date                DATE        NOT NULL,
+    phase                   TEXT        NOT NULL CHECK (phase IN ('phase_1', 'phase_2')),
+    status                  TEXT        NOT NULL DEFAULT 'pending'
+                            CHECK (status IN ('pending', 'taken', 'missed', 'partial')),
+    notes                   TEXT,
+    recorded_by_user_id     UUID        REFERENCES users(id) ON DELETE SET NULL,
+    created_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+    updated_at              TIMESTAMPTZ NOT NULL DEFAULT now(),
+
+    CONSTRAINT uq_adherence_log_date UNIQUE (medication_adherence_id, log_date)
+);
 
 -- =============================================================================
 -- View: v_patient_current_status
@@ -131,77 +138,57 @@ CREATE OR REPLACE VIEW v_patient_current_status AS
 SELECT
     p.id          AS patient_id,
     p.full_name,
-    pt.id         AS treatment_id,
+    ma.id         AS medication_adherence_id,
     CASE
-        WHEN pt.id IS NULL
+        WHEN ma.id IS NULL
             THEN 'Tidak Ada Pengobatan'
-        WHEN pt.treatment_completed_date IS NOT NULL
-             AND CURRENT_DATE >= pt.treatment_completed_date
+        WHEN ma.treatment_completed_date IS NOT NULL
+             AND CURRENT_DATE >= ma.treatment_completed_date
             THEN 'Sembuh'
-        WHEN CURRENT_DATE < pt.phase_1_end_date
+        WHEN CURRENT_DATE < ma.phase_1_end_date
             THEN 'Resiko Tinggi'
-        WHEN CURRENT_DATE < (pt.phase_1_end_date + INTERVAL '4 months')
+        WHEN CURRENT_DATE < (ma.phase_1_end_date + INTERVAL '4 months')
             THEN 'Dalam Perawatan'
         ELSE
-          CASE pt.status
+          CASE ma.status
             WHEN 'completed'    THEN 'Selesai'
             WHEN 'discontinued' THEN 'Dihentikan'
             ELSE 'Perlu Evaluasi'
           END
     END AS status
 FROM patients p
-LEFT JOIN patient_treatments pt
-    ON pt.patient_id = p.id AND pt.status = 'active'
+LEFT JOIN medication_adherence ma
+    ON ma.patient_id = p.id AND ma.status = 'active'
 WHERE p.deleted_at IS NULL;
 
 -- =============================================================================
--- Table 7: daily_medication_targets
+-- View: v_adherence_summary
+-- Aggregates adherence_logs per patient per phase.
+-- adherence_percentage = taken / (taken + missed + partial) * 100
+-- Pending rows are excluded from the denominator (not yet recorded).
+-- Use this view to power the adherence % graph, broken down by phase.
 -- =============================================================================
-CREATE TABLE daily_medication_targets (
-    id                 UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    target_date        DATE        NOT NULL UNIQUE,
-    notes              TEXT,
-    created_by_user_id UUID        REFERENCES users(id) ON DELETE SET NULL,
-    created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at         TIMESTAMPTZ NOT NULL DEFAULT now()
-);
+CREATE OR REPLACE VIEW v_adherence_summary AS
+SELECT
+    ma.patient_id,
+    ma.id                                                                       AS medication_adherence_id,
+    al.phase,
+    COUNT(al.id)                                                                AS total_logged_days,
+    COUNT(al.id) FILTER (WHERE al.status = 'taken')                            AS taken_days,
+    COUNT(al.id) FILTER (WHERE al.status = 'missed')                           AS missed_days,
+    COUNT(al.id) FILTER (WHERE al.status = 'partial')                          AS partial_days,
+    COUNT(al.id) FILTER (WHERE al.status = 'pending')                          AS pending_days,
+    ROUND(
+        COUNT(al.id) FILTER (WHERE al.status = 'taken')::NUMERIC /
+        NULLIF(COUNT(al.id) FILTER (WHERE al.status != 'pending'), 0) * 100,
+        2
+    )                                                                           AS adherence_percentage
+FROM medication_adherence ma
+JOIN adherence_logs al ON al.medication_adherence_id = ma.id
+GROUP BY ma.patient_id, ma.id, al.phase;
 
 -- =============================================================================
--- Table 8: daily_medication_target_items
--- =============================================================================
-CREATE TABLE daily_medication_target_items (
-    id            UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    target_id     UUID        NOT NULL REFERENCES daily_medication_targets(id) ON DELETE CASCADE,
-    medication_id UUID        NOT NULL REFERENCES medications(id) ON DELETE RESTRICT,
-    dosage_mg     INTEGER,
-    sequence      SMALLINT    NOT NULL DEFAULT 1,
-    created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
-    ,CONSTRAINT uq_target_medication UNIQUE (target_id, medication_id)
-);
-
--- =============================================================================
--- Table 9: patient_medication_logs
--- =============================================================================
-CREATE TABLE patient_medication_logs (
-    id                    UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
-    patient_treatment_id  UUID        NOT NULL REFERENCES patient_treatments(id) ON DELETE CASCADE,
-    log_date              DATE        NOT NULL,
-    target_item_id        UUID        REFERENCES daily_medication_target_items(id) ON DELETE SET NULL,
-    medication_id         UUID        NOT NULL REFERENCES medications(id) ON DELETE RESTRICT,
-    dosage_mg             INTEGER,
-    status                TEXT        NOT NULL DEFAULT 'pending'
-                          CHECK (status IN ('pending', 'taken', 'missed', 'partial')),
-    taken_at              TIMESTAMPTZ,
-    recorded_by_user_id   UUID        REFERENCES users(id) ON DELETE SET NULL,
-    notes                 TEXT,
-    created_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-    updated_at            TIMESTAMPTZ NOT NULL DEFAULT now(),
-
-    CONSTRAINT uq_patient_log_date_med UNIQUE (patient_treatment_id, log_date, medication_id)
-);
-
--- =============================================================================
--- Table 10: notifications
+-- Table 7: notifications
 -- =============================================================================
 CREATE TABLE notifications (
     id                UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -216,7 +203,7 @@ CREATE TABLE notifications (
 );
 
 -- =============================================================================
--- Table 11: audit_logs
+-- Table 8: audit_logs
 -- =============================================================================
 CREATE TABLE audit_logs (
     id           UUID        NOT NULL DEFAULT gen_random_uuid() PRIMARY KEY,
@@ -233,32 +220,23 @@ CREATE TABLE audit_logs (
 -- =============================================================================
 -- Indexes
 -- =============================================================================
--- Note: idx_patient_treatments_one_active (unique) was created above with the table
+CREATE INDEX idx_adherence_logs_adherence_date
+    ON adherence_logs (medication_adherence_id, log_date DESC);
 
-CREATE INDEX idx_patient_medication_logs_treatment_date
-    ON patient_medication_logs (patient_treatment_id, log_date DESC);
-
-CREATE INDEX idx_daily_medication_targets_date
-    ON daily_medication_targets (target_date DESC);
+CREATE INDEX idx_adherence_logs_date
+    ON adherence_logs (log_date DESC);
 
 CREATE INDEX idx_patients_region_active
     ON patients (region_id)
     WHERE deleted_at IS NULL;
 
--- Notification unread badge
 CREATE INDEX idx_notifications_user_unread
     ON notifications (recipient_user_id)
     WHERE is_read = false;
 
--- Audit log per entity lookups
 CREATE INDEX idx_audit_logs_entity
     ON audit_logs (entity_type, entity_id);
 
--- Refresh token per-user queries
 CREATE INDEX idx_refresh_tokens_user_active
     ON refresh_tokens (user_id, expires_at)
     WHERE revoked_at IS NULL;
-
--- Daily compliance rate queries
-CREATE INDEX idx_patient_medication_logs_date
-    ON patient_medication_logs (log_date DESC);
