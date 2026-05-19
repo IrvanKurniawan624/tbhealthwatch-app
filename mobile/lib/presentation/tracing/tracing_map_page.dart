@@ -83,6 +83,12 @@ class _TracingMapPageState extends State<TracingMapPage> {
     _loadGeoJson();
   }
 
+  @override
+  void dispose() {
+    _mapController.dispose();
+    super.dispose();
+  }
+
   Future<void> _loadGeoJson() async {
     try {
       final rawGeoJson = await rootBundle.loadString(
@@ -179,19 +185,18 @@ class _TracingMapPageState extends State<TracingMapPage> {
     }).toList();
   }
 
-  LatLng _calculateCenter(List<LatLng> points) {
+  LatLng? _calculateCenter(List<LatLng> points) {
+    if (points.isEmpty) return null;
     double totalLatitude = 0;
     double totalLongitude = 0;
-
     for (final point in points) {
       totalLatitude += point.latitude;
       totalLongitude += point.longitude;
     }
-
-    return LatLng(
-      totalLatitude / points.length,
-      totalLongitude / points.length,
-    );
+    final lat = totalLatitude / points.length;
+    final lng = totalLongitude / points.length;
+    if (!lat.isFinite || !lng.isFinite) return null;
+    return LatLng(lat, lng);
   }
 
   Color _fillColorByRisk(RiskLevel riskLevel) {
@@ -250,51 +255,51 @@ class _TracingMapPageState extends State<TracingMapPage> {
   }
 
   List<Marker> _buildMarkers() {
-    return _districtPolygons
-        .where((district) => district.traceData.patientCount > 0)
-        .map((district) {
-          final center = _calculateCenter(district.points);
-          final traceData = district.traceData;
-
-          return Marker(
-            point: center,
-            width: 46,
-            height: 46,
-            child: GestureDetector(
-              onTap: () {
-                setState(() {
-                  _selectedRegion = traceData;
-                });
-
-                _mapController.move(center, 12.5);
-              },
-              child: Container(
-                decoration: BoxDecoration(
-                  color: _bubbleColorByRisk(traceData.riskLevel),
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 2),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.25),
-                      blurRadius: 8,
-                      offset: const Offset(0, 3),
-                    ),
-                  ],
+    final markers = <Marker>[];
+    for (final district in _districtPolygons) {
+      if (district.traceData.patientCount == 0) continue;
+      final center = _calculateCenter(district.points);
+      if (center == null) continue;
+      final traceData = district.traceData;
+      markers.add(Marker(
+        point: center,
+        width: 46,
+        height: 46,
+        child: GestureDetector(
+          onTap: () {
+            if (!mounted) return;
+            setState(() => _selectedRegion = traceData);
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) _mapController.move(center, 12.5);
+            });
+          },
+          child: Container(
+            decoration: BoxDecoration(
+              color: _bubbleColorByRisk(traceData.riskLevel),
+              shape: BoxShape.circle,
+              border: Border.all(color: Colors.white, width: 2),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.25),
+                  blurRadius: 8,
+                  offset: const Offset(0, 3),
                 ),
-                alignment: Alignment.center,
-                child: Text(
-                  traceData.patientCount.toString(),
-                  style: const TextStyle(
-                    color: Colors.white,
-                    fontSize: 13,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
+              ],
+            ),
+            alignment: Alignment.center,
+            child: Text(
+              traceData.patientCount.toString(),
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 13,
+                fontWeight: FontWeight.bold,
               ),
             ),
-          );
-        })
-        .toList();
+          ),
+        ),
+      ));
+    }
+    return markers;
   }
 
   @override
@@ -336,11 +341,17 @@ class _TracingMapPageState extends State<TracingMapPage> {
   Widget _buildMap() {
     return FlutterMap(
       mapController: _mapController,
-      options: const MapOptions(
-        initialCenter: LatLng(-7.2575, 112.7521),
+      options: MapOptions(
+        initialCenter: const LatLng(-7.2575, 112.7521),
         initialZoom: 11,
         minZoom: 10,
         maxZoom: 17,
+        cameraConstraint: CameraConstraint.containCenter(
+          bounds: LatLngBounds(
+            const LatLng(-8.0, 112.0),
+            const LatLng(-6.8, 113.5),
+          ),
+        ),
       ),
       children: [
         TileLayer(
@@ -478,9 +489,7 @@ class _TracingMapPageState extends State<TracingMapPage> {
             ),
             IconButton(
               onPressed: () {
-                setState(() {
-                  _selectedRegion = null;
-                });
+                if (mounted) setState(() => _selectedRegion = null);
               },
               icon: const Icon(Icons.close),
             ),
