@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../profile/profile_page.dart';
 import '../monitoring/monitoring_page.dart';
+import '../tracing/tracing_map_page.dart';
+import '../surveillance/surveillance_page.dart';
 
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -11,16 +13,18 @@ class CustomBottomNav extends StatelessWidget {
     if (index == currentIndex) return;
 
     switch (index) {
+      case 0:
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const SurveillancePage()));
+        break;
+      case 1:
+        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const TracingMapPage()));
+        break;
       case 2:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MonitoringPage()));
         break;
       case 3:
         Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const ProfilePage()));
         break;
-      default:
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Halaman untuk tab index: $index belum tersedia")),
-        );
     }
   }
 
