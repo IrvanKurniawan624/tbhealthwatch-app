@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'core/api_client.dart';
-import 'presentation/auth/login_page.dart';
-import 'presentation/monitoring/monitoring_page.dart';
+import 'presentation/tracing/tracing_map_page.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,24 +13,11 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(
-            seedColor: const Color(0xFF0052CC)),
+        colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF0052CC)),
         useMaterial3: true,
         scaffoldBackgroundColor: Colors.white,
       ),
-      home: FutureBuilder<bool>(
-        future: ApiClient.hasToken(),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          return snapshot.data == true
-              ? const MonitoringPage()
-              : const LoginPage();
-        },
-      ),
+      home: const TracingMapPage(),
     );
   }
 }
