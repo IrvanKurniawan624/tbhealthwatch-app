@@ -7,10 +7,7 @@ class MockProfileRepository implements IProfileRepository {
 
   @override
   Future<Profile> getProfileData() async {
-    // Simulasi loading jaringan 1.5 detik
     await Future.delayed(const Duration(milliseconds: 1500));
-    
-    // Data dummy sesuai desain Figma
     return Profile(
       name: "Dr. Siti Aminah",
       role: "Epidemiology Specialist",

@@ -8,11 +8,9 @@ class UnauthorizedException implements Exception {
 }
 
 class ApiClient {
-  static const String _baseUrl = 'http://localhost:5000/api';
+  static const String _baseUrl = 'https://tbhealthwatch-api-18726666384.asia-southeast2.run.app/api';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
-
-  // --- Token storage (static helpers used by login/logout screens) -----------
 
   static Future<void> saveTokens(String accessToken, String refreshToken) async {
     final prefs = await SharedPreferences.getInstance();
@@ -32,8 +30,6 @@ class ApiClient {
     return token != null && token.isNotEmpty;
   }
 
-  // --- Private token read ---------------------------------------------------
-
   Future<String?> _getAccessToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_accessTokenKey);
@@ -44,8 +40,6 @@ class ApiClient {
     return prefs.getString(_refreshTokenKey);
   }
 
-  // --- Public HTTP methods --------------------------------------------------
-
   Future<dynamic> get(String path) => _request('GET', path);
 
   Future<dynamic> post(String path, [Map<String, dynamic>? body]) =>
@@ -53,8 +47,6 @@ class ApiClient {
 
   Future<dynamic> put(String path, Map<String, dynamic> body) =>
       _request('PUT', path, body);
-
-  // --- Core request logic ---------------------------------------------------
 
   Future<dynamic> _request(String method, String path,
       [Map<String, dynamic>? body]) async {

@@ -1,11 +1,11 @@
 class Profile {
-  final String name;           // maps to backend's fullName
-  final String role;           // maps to backend's specialization
+  final String name;
+  final String role;
   final String facilityName;
   final String facilityRole;
   final String assignmentLocation;
-  final String? wilayah;       // maps to backend's regionName
-  final String? regionId;      // UUID — needed for PUT /profile/me
+  final String? wilayah;
+  final String? regionId;
   final String email;
   final String phone;
   final String address;
@@ -38,7 +38,6 @@ class Profile {
     );
   }
 
-  // Sends the keys that UpdateProfileDto expects on the backend
   Map<String, dynamic> toJson() {
     return {
       'fullName': name,

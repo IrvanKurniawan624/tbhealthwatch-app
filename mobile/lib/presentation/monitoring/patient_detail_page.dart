@@ -6,7 +6,7 @@ import '../../data/repositories/api_patient_repository.dart';
 import '../../data/repositories/api_adherence_repository.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_bottom_nav.dart';
-import 'edit_patient_page.dart'; // <-- Pastikan import ini ada
+import 'edit_patient_page.dart';
 
 class PatientDetailPage extends StatefulWidget {
   final Patient patient;
@@ -18,73 +18,84 @@ class PatientDetailPage extends StatefulWidget {
 }
 
 class _PatientDetailPageState extends State<PatientDetailPage> {
-  late Future<_DetailBundle> _future;
   final _patientRepo = ApiPatientRepository(ApiClient());
   final _adherenceRepo = ApiAdherenceRepository(ApiClient());
+
+  _DetailBundle? _bundle;
+  bool _loading = true;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
-    _future = _loadAll();
+    _loadAll();
   }
 
-  Future<_DetailBundle> _loadAll() async {
-    final now = DateTime.now();
-    final results = await Future.wait([
-      _patientRepo.getById(widget.patient.id),
-      _adherenceRepo.getSummary(widget.patient.id),
-      _adherenceRepo.getCalendar(widget.patient.id, now.year, now.month),
-    ]);
-    return _DetailBundle(
-      patient: results[0] as Patient,
-      summary: results[1] as AdherenceSummary,
-      calendar: results[2] as AdherenceCalendar,
-    );
+  Future<void> _loadAll() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final now = DateTime.now();
+      final results = await Future.wait([
+        _patientRepo.getById(widget.patient.id),
+        _adherenceRepo.getSummary(widget.patient.id),
+        _adherenceRepo.getCalendar(widget.patient.id, now.year, now.month),
+      ]);
+      if (mounted) {
+        setState(() {
+          _bundle = _DetailBundle(
+            patient: results[0] as Patient,
+            summary: results[1] as AdherenceSummary,
+            calendar: results[2] as AdherenceCalendar,
+          );
+          _loading = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
   }
 
   @override
   Widget build(BuildContext context) {
+    Widget body;
+    if (_loading) {
+      body = const Center(child: CircularProgressIndicator());
+    } else if (_error != null) {
+      body = Center(child: Text('Gagal memuat data: $_error'));
+    } else {
+      body = _buildContent(_bundle!);
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: const CustomAppBar(showBackButton: true),
-      body: FutureBuilder<_DetailBundle>(
-        future: _future,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState != ConnectionState.done) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          if (snapshot.hasError) {
-            return Center(child: Text('Gagal memuat data: ${snapshot.error}'));
-          }
-          final bundle = snapshot.data!;
-          return _buildContent(bundle);
-        },
-      ),
+      body: body,
       bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 
   Widget _buildContent(_DetailBundle bundle) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.all(24.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          _buildHeaderInfo(context, bundle),
-          const SizedBox(height: 32),
-          _buildTreatmentTarget(bundle),
-          const SizedBox(height: 24),
-          _buildStatsAndAction(bundle),
-          const SizedBox(height: 32),
-          _buildCalendarSection(bundle),
-        ],
+    return RefreshIndicator(
+      onRefresh: _loadAll,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            _buildHeaderInfo(context, bundle),
+            const SizedBox(height: 32),
+            _buildTreatmentTarget(bundle),
+            const SizedBox(height: 24),
+            _buildStatsAndAction(bundle),
+            const SizedBox(height: 32),
+            _buildCalendarSection(bundle),
+          ],
+        ),
       ),
     );
   }
 
-  // =======================================================================
-  // 1. KOMPONEN: HEADER INFO PASIEN
-  // =======================================================================
   Widget _buildHeaderInfo(BuildContext context, _DetailBundle bundle) {
     final patient = bundle.patient;
     return Column(
@@ -92,37 +103,21 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
       children: [
         const Text(
           "ACTIVE MONITORING",
-          style: TextStyle(
-            color: Color(0xFF0052CC),
-            fontSize: 10,
-            fontWeight: FontWeight.bold,
-            letterSpacing: 1.0,
-          ),
+          style: TextStyle(color: Color(0xFF0052CC), fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1.0),
         ),
         const SizedBox(height: 12),
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-          decoration: BoxDecoration(
-            color: const Color(0xFFEBF5FF),
-            borderRadius: BorderRadius.circular(20),
-          ),
+          decoration: BoxDecoration(color: const Color(0xFFEBF5FF), borderRadius: BorderRadius.circular(20)),
           child: Text(
             patient.status,
-            style: const TextStyle(
-              color: Color(0xFF0052CC),
-              fontSize: 10,
-              fontWeight: FontWeight.bold,
-            ),
+            style: const TextStyle(color: Color(0xFF0052CC), fontSize: 10, fontWeight: FontWeight.bold),
           ),
         ),
         const SizedBox(height: 12),
         Text(
           patient.name,
-          style: const TextStyle(
-            fontSize: 28,
-            fontWeight: FontWeight.bold,
-            color: Color(0xFF1F2937),
-          ),
+          style: const TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
         ),
         const SizedBox(height: 12),
         _buildInfoRow("Patient ID:", patient.nik ?? patient.id, isHighlight: true),
@@ -135,13 +130,12 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
         const SizedBox(height: 20),
         Center(
           child: ElevatedButton.icon(
-            onPressed: () {
-              Navigator.push(
+            onPressed: () async {
+              final updated = await Navigator.push<bool>(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => EditPatientPage(patient: patient),
-                ),
+                MaterialPageRoute(builder: (context) => EditPatientPage(patient: patient)),
               );
+              if (updated == true) await _loadAll();
             },
             icon: const Icon(Icons.edit_document, size: 16, color: Colors.white),
             label: const Text("EDIT DATA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
@@ -159,10 +153,7 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
   Widget _buildInfoRow(String label, String value, {bool isHighlight = false}) {
     return Row(
       children: [
-        Text(
-          label,
-          style: const TextStyle(color: Colors.grey, fontSize: 13),
-        ),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 13)),
         const SizedBox(width: 4),
         Text(
           value,
@@ -176,19 +167,13 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
     );
   }
 
-  // =======================================================================
-  // 2. KOMPONEN: TARGET PENGOBATAN
-  // =======================================================================
   Widget _buildTreatmentTarget(_DetailBundle bundle) {
     final summary = bundle.summary;
     final patient = bundle.patient;
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          "Target Pengobatan",
-          style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-        ),
+        const Text("Target Pengobatan", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
         Text(
           "Presentase Kepatuhan Obat Untuk ${patient.phase.toLowerCase().replaceAll('phase ', 'Phase ')}",
           style: const TextStyle(fontSize: 10, color: Colors.grey),
@@ -228,11 +213,15 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
     );
   }
 
-  // =======================================================================
-  // 3. KOMPONEN: STATISTIK & TOMBOL CATAT
-  // =======================================================================
   Widget _buildStatsAndAction(_DetailBundle bundle) {
     final summary = bundle.summary;
+    final now = DateTime.now();
+    final todayStr =
+        '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+    final alreadyLogged = bundle.calendar.days
+        .where((d) => d.date == todayStr)
+        .any((d) => d.status == 'taken');
+
     return Column(
       children: [
         Row(
@@ -243,8 +232,10 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
               children: [
                 const Text("DOSIS DIAMBIL", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                 const SizedBox(height: 4),
-                Text("${summary.dosesTaken}/${summary.dosesTotal}",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937))),
+                Text(
+                  "${summary.dosesTaken}/${summary.dosesTotal}",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+                ),
               ],
             ),
             Column(
@@ -252,8 +243,10 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
               children: [
                 const Text("STREAK", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                 const SizedBox(height: 4),
-                Text("${summary.streakDays} Days",
-                    style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFB45309))),
+                Text(
+                  "${summary.streakDays} Days",
+                  style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Color(0xFFB45309)),
+                ),
               ],
             ),
           ],
@@ -262,32 +255,37 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
         SizedBox(
           width: double.infinity,
           child: ElevatedButton.icon(
-            onPressed: () async {
-              final today = DateTime.now();
-              final logDate =
-                  '${today.year}-${today.month.toString().padLeft(2, '0')}-${today.day.toString().padLeft(2, '0')}';
-              try {
-                await _adherenceRepo.log(widget.patient.id, logDate, 'taken');
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Obat berhasil dicatat')),
-                  );
-                  setState(() {
-                    _future = _loadAll();
-                  });
-                }
-              } catch (e) {
-                if (mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(content: Text('Gagal mencatat: $e')),
-                  );
-                }
-              }
-            },
-            icon: const Icon(Icons.add_circle, color: Colors.white),
-            label: const Text("Catat Obat Sekarang", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+            onPressed: alreadyLogged
+                ? null
+                : () async {
+                    try {
+                      await _adherenceRepo.log(widget.patient.id, todayStr, 'taken');
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Obat berhasil dicatat')),
+                        );
+                        await _loadAll();
+                      }
+                    } catch (e) {
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Gagal mencatat: $e')),
+                        );
+                      }
+                    }
+                  },
+            icon: Icon(
+              alreadyLogged ? Icons.check_circle : Icons.add_circle,
+              color: Colors.white,
+            ),
+            label: Text(
+              alreadyLogged ? "Sudah Dicatat Hari Ini" : "Catat Obat Sekarang",
+              style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            ),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0052CC),
+              backgroundColor: alreadyLogged ? Colors.green[600] : const Color(0xFF0052CC),
+              disabledBackgroundColor: Colors.green[600],
+              disabledForegroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(vertical: 16),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
             ),
@@ -297,9 +295,6 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
     );
   }
 
-  // =======================================================================
-  // 4. KOMPONEN: KALENDER KEPATUHAN
-  // =======================================================================
   Widget _buildCalendarSection(_DetailBundle bundle) {
     final calendar = bundle.calendar;
     final monthNames = [
@@ -307,7 +302,6 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
       'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'
     ];
     final monthLabel = '${monthNames[calendar.month - 1]} ${calendar.year}';
-
     final takenCount = calendar.days.where((d) => d.status == 'taken').length;
     final missedCount = calendar.days.where((d) => d.status == 'missed').length;
 
@@ -368,17 +362,24 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
   }
 
   Widget _buildCalendarGrid(_DetailBundle bundle) {
-    final List<String> dayHeaders = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
+    const dayHeaders = ['S', 'S', 'R', 'K', 'J', 'S', 'M'];
     final days = bundle.calendar.days;
+    // Monday=1 → offset 0, Sunday=7 → offset 6
+    final offset = DateTime(bundle.calendar.year, bundle.calendar.month, 1).weekday - 1;
 
     return Column(
       children: [
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: dayHeaders.map((day) => SizedBox(
-            width: 30,
-            child: Center(child: Text(day, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey))),
-          )).toList(),
+          children: dayHeaders
+              .map((d) => SizedBox(
+                    width: 30,
+                    child: Center(
+                      child: Text(d,
+                          style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
+                    ),
+                  ))
+              .toList(),
         ),
         const SizedBox(height: 12),
         GridView.builder(
@@ -390,9 +391,10 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
             crossAxisSpacing: 8,
             childAspectRatio: 0.8,
           ),
-          itemCount: days.length,
+          itemCount: offset + days.length,
           itemBuilder: (context, index) {
-            final day = days[index];
+            if (index < offset) return const SizedBox.shrink();
+            final day = days[index - offset];
             final parts = day.date.split('-');
             final dayNum = parts.length >= 3 ? parts[2] : day.date;
             return _buildDateItem(dayNum, day.status);
@@ -410,6 +412,8 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
         return (bg: const Color(0xFFFFE4E6), icon: Icons.close, iconColor: Colors.red);
       case 'partial':
         return (bg: const Color(0xFFFFF7E6), icon: Icons.remove, iconColor: Colors.orange);
+      case 'pending':
+        return (bg: const Color(0xFFF3F4F6), icon: null, iconColor: null);
       default:
         return (bg: Colors.transparent, icon: null, iconColor: null);
     }
@@ -417,7 +421,8 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
 
   Widget _buildDateItem(String date, String status) {
     final style = _statusStyle(status);
-    final textColor = status == 'none' ? Colors.grey[400]! : Colors.black87;
+    final isGreyed = status == 'outside_month' || status == 'upcoming';
+    final textColor = isGreyed ? Colors.grey[400]! : Colors.black87;
 
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
@@ -425,23 +430,15 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
         Container(
           width: 28,
           height: 28,
-          decoration: BoxDecoration(
-            color: style.bg,
-            shape: BoxShape.circle,
-          ),
+          decoration: BoxDecoration(color: style.bg, shape: BoxShape.circle),
           child: Center(
-            child: Text(
-              date,
-              style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12),
-            ),
+            child: Text(date, style: TextStyle(color: textColor, fontWeight: FontWeight.bold, fontSize: 12)),
           ),
         ),
         const SizedBox(height: 2),
         SizedBox(
           height: 10,
-          child: style.icon != null
-              ? Icon(style.icon, size: 10, color: style.iconColor)
-              : null,
+          child: style.icon != null ? Icon(style.icon, size: 10, color: style.iconColor) : null,
         ),
       ],
     );
@@ -452,9 +449,6 @@ class _DetailBundle {
   final Patient patient;
   final AdherenceSummary summary;
   final AdherenceCalendar calendar;
-  _DetailBundle({
-    required this.patient,
-    required this.summary,
-    required this.calendar,
-  });
+
+  _DetailBundle({required this.patient, required this.summary, required this.calendar});
 }

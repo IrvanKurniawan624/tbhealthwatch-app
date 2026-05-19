@@ -4,10 +4,7 @@ import 'patient_repository.dart';
 class MockPatientRepository implements IPatientRepository {
   @override
   Future<List<Patient>> getMonitoringPatients() async {
-    // Simulasi loading jaringan 1 detik
     await Future.delayed(const Duration(seconds: 1));
-
-    // Dummy data sesuai desain Figma
     return [
       Patient(
         id: "TB-2023-0988",
@@ -30,7 +27,7 @@ class MockPatientRepository implements IPatientRepository {
       Patient(
         id: "TB-2023-1122",
         name: "Rina Wulandari",
-        status: "STABLE", // Sesuai figma (campuran inggris/indo)
+        status: "STABLE",
         location: "Tegalsari, Surabaya",
         phase: "PHASE 2 PERAWATAN",
         currentMonth: 4,

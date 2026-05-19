@@ -3,10 +3,6 @@ import '../../core/api_client.dart';
 import '../../data/models/patient_model.dart';
 import '../../data/repositories/api_patient_repository.dart';
 
-// ============================================================================
-// 1. HALAMAN EDIT PASIEN
-// Halaman ini digunakan untuk memperbarui informasi detail pasien.
-// ============================================================================
 class EditPatientPage extends StatefulWidget {
   final Patient patient;
 
@@ -17,14 +13,10 @@ class EditPatientPage extends StatefulWidget {
 }
 
 class _EditPatientPageState extends State<EditPatientPage> {
-  // --- Controller untuk menangkap inputan ---
   late TextEditingController _nameController;
   late TextEditingController _dobController;
-  late TextEditingController _wilayahController;
   late TextEditingController _phoneController;
-  late TextEditingController _idController;
-
-  String _selectedPhase = '2'; // Default sesuai figma
+  late TextEditingController _nikController;
 
   final _repo = ApiPatientRepository(ApiClient());
   bool _isSaving = false;
@@ -34,13 +26,10 @@ class _EditPatientPageState extends State<EditPatientPage> {
   @override
   void initState() {
     super.initState();
-    // Pre-fill from the patient passed in
     _nameController = TextEditingController(text: widget.patient.name);
     _dobController = TextEditingController(text: widget.patient.dob ?? '');
-    _wilayahController = TextEditingController(text: widget.patient.regionName ?? '');
     _phoneController = TextEditingController(text: widget.patient.phone ?? '');
-    // ID menggunakan data asli yang dioper dari halaman sebelumnya
-    _idController = TextEditingController(text: widget.patient.id);
+    _nikController = TextEditingController(text: widget.patient.nik ?? widget.patient.id);
     _loadRegions();
   }
 
@@ -50,7 +39,6 @@ class _EditPatientPageState extends State<EditPatientPage> {
       if (mounted) {
         setState(() {
           _regions = data.cast<Map<String, dynamic>>();
-          // Pre-select region matching the patient's regionName
           final match = _regions.firstWhere(
             (r) => r['name'] == widget.patient.regionName,
             orElse: () => {},
@@ -65,9 +53,8 @@ class _EditPatientPageState extends State<EditPatientPage> {
   void dispose() {
     _nameController.dispose();
     _dobController.dispose();
-    _wilayahController.dispose();
     _phoneController.dispose();
-    _idController.dispose();
+    _nikController.dispose();
     super.dispose();
   }
 
@@ -80,9 +67,8 @@ class _EditPatientPageState extends State<EditPatientPage> {
         elevation: 0,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF0052CC)),
-          onPressed: () => Navigator.pop(context), // Kembali ke halaman sebelumnya
+          onPressed: () => Navigator.pop(context),
         ),
-        // Garis progress bar di bawah App Bar
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(2.0),
           child: Row(
@@ -99,7 +85,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text(
-              "Edit Data Pasien baru",
+              "Edit Data Pasien",
               style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.black87),
             ),
             const SizedBox(height: 16),
@@ -110,29 +96,17 @@ class _EditPatientPageState extends State<EditPatientPage> {
             const SizedBox(height: 8),
             const Divider(thickness: 1, color: Colors.black12),
             const SizedBox(height: 12),
-
-            // --- Form Inputs ---
             _buildLabel("Name"),
             _buildTextField(_nameController),
-
             _buildLabel("Tanggal lahir"),
             _buildTextField(_dobController),
-
             _buildLabel("Wilayah"),
             _buildRegionDropdown(),
-
             _buildLabel("Nomor Telefon"),
             _buildTextField(_phoneController),
-
-            _buildLabel("Id"),
-            _buildTextField(_idController, isEnabled: false), // Kotak ID abu-abu
-
-            _buildLabel("Phase"),
-            _buildDropdown(),
-
+            _buildLabel("NIK"),
+            _buildTextField(_nikController, isEnabled: false),
             const SizedBox(height: 48),
-
-            // --- Tombol Edit ---
             Center(
               child: SizedBox(
                 width: 200,
@@ -174,10 +148,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
                       ? const SizedBox(
                           width: 20,
                           height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                            color: Colors.white,
-                          ),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
                         )
                       : Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -190,24 +161,17 @@ class _EditPatientPageState extends State<EditPatientPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 24), // Spasi bawah agar tidak mentok
+            const SizedBox(height: 24),
           ],
         ),
       ),
     );
   }
 
-  // ===========================================================================
-  // WIDGET BANTUAN
-  // ===========================================================================
-
   Widget _buildLabel(String text) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0, top: 12.0),
-      child: Text(
-        text,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87),
-      ),
+      child: Text(text, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.black87)),
     );
   }
 
@@ -218,7 +182,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
       style: TextStyle(fontSize: 14, color: isEnabled ? Colors.black87 : Colors.black54),
       decoration: InputDecoration(
         filled: true,
-        fillColor: isEnabled ? Colors.white : Colors.grey[300], // Warna abu-abu kalau disable
+        fillColor: isEnabled ? Colors.white : Colors.grey[300],
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(6),
@@ -250,7 +214,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
           isExpanded: true,
           icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
           hint: Text(
-            _wilayahController.text.isNotEmpty ? _wilayahController.text : 'Pilih wilayah',
+            widget.patient.regionName ?? 'Pilih wilayah',
             style: const TextStyle(fontSize: 14, color: Colors.black87),
           ),
           items: _regions.map((r) => DropdownMenuItem<String>(
@@ -258,35 +222,6 @@ class _EditPatientPageState extends State<EditPatientPage> {
             child: Text(r['name'] as String, style: const TextStyle(fontSize: 14, color: Colors.black87)),
           )).toList(),
           onChanged: (val) => setState(() => _selectedRegionId = val),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildDropdown() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        border: Border.all(color: Colors.grey[300]!),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          value: _selectedPhase,
-          isExpanded: true,
-          icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
-          items: ['1', '2', '3'].map((String value) {
-            return DropdownMenuItem<String>(
-              value: value,
-              child: Text(value, style: const TextStyle(fontSize: 14, color: Colors.black87)),
-            );
-          }).toList(),
-          onChanged: (newValue) {
-            setState(() {
-              _selectedPhase = newValue!;
-            });
-          },
         ),
       ),
     );

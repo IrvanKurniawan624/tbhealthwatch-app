@@ -73,14 +73,13 @@ public static class DatabaseSeeder
 
         var gubeng = await db.Regions.FirstOrDefaultAsync(r => r.Code == "SURABAYA.GUBENG");
 
-        db.Users.AddRange(
+        db.Users.Add(
             new User
             {
-                // Fixed ID so mobile team can hardcode it during dev if needed
                 Id = new Guid("00000000-0000-0000-0000-000000000001"),
-                Email = "siti.aminah@tbhealthwatch.test",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Demo123!"),
-                FullName = "Dr. Siti Aminah",
+                Email = "admin@gmail.com",
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin"),
+                FullName = "Dr. Andy",
                 Specialization = "Epidemiology Specialist",
                 FacilityName = "RSUD Dr. Soetomo",
                 FacilityRole = "Koordinator Pemantauan Wilayah Gubeng, Surabaya Timur",
@@ -91,18 +90,7 @@ public static class DatabaseSeeder
                 IsVerified = true,
                 CreatedAt = DateTime.UtcNow,
                 UpdatedAt = DateTime.UtcNow
-            },
-            new User
-            {
-                Id = Guid.NewGuid(),
-                Email = "admin@tbhealthwatch.test",
-                PasswordHash = BCrypt.Net.BCrypt.HashPassword("Admin123!"),
-                FullName = "Administrator",
-                IsVerified = true,
-                CreatedAt = DateTime.UtcNow,
-                UpdatedAt = DateTime.UtcNow
-            }
-        );
+            });
 
         await db.SaveChangesAsync();
     }
