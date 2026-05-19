@@ -1,16 +1,11 @@
 import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../../data/models/patient_model.dart';
-import '../../data/repositories/patient_repository.dart';
 import '../../data/repositories/api_patient_repository.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_bottom_nav.dart';
-import 'patient_detail_page.dart'; // <-- Import halaman detail yang baru dibuat
+import 'patient_detail_page.dart';
 
-// ============================================================================
-// 1. HALAMAN UTAMA MONITORING (ROOT PAGE)
-// Halaman ini bertugas mengambil data pasien dari repository dan merakit UI.
-// ============================================================================
 class MonitoringPage extends StatefulWidget {
   const MonitoringPage({super.key});
 
@@ -19,10 +14,6 @@ class MonitoringPage extends StatefulWidget {
 }
 
 class _MonitoringPageState extends State<MonitoringPage> {
-  // ----------------------------------------------------------------------
-  // ⚠️ TEMPAT MENGUBAH KE BACKEND ASLI NANTI
-  // Untuk saat ini pakai MockPatientRepository (Dummy Data).
-  // ----------------------------------------------------------------------
   final _repository = ApiPatientRepository(ApiClient());
   late Future<List<Patient>> _patientsFuture;
 
@@ -35,58 +26,48 @@ class _MonitoringPageState extends State<MonitoringPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FA), // Background abu-abu terang
-      appBar: const CustomAppBar(), // <-- Memanggil Global App Bar
+      backgroundColor: const Color(0xFFF8F9FA),
+      appBar: const CustomAppBar(),
       body: FutureBuilder<List<Patient>>(
         future: _patientsFuture,
         builder: (context, snapshot) {
-          // Menampilkan loading saat data sedang diambil
           if (snapshot.connectionState == ConnectionState.waiting) {
             return const Center(child: CircularProgressIndicator());
-          } 
-          // Menampilkan pesan error jika gagal mengambil data
-          else if (snapshot.hasError) {
+          } else if (snapshot.hasError) {
             return Center(child: Text("Error: ${snapshot.error}"));
-          } 
-          // Jika data berhasil diambil, tampilkan daftar pasien
-          else if (snapshot.hasData) {
+          } else if (snapshot.hasData) {
             final patients = snapshot.data!;
-            return SingleChildScrollView(
-              padding: const EdgeInsets.all(20.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Judul Halaman
-                  const Text(
-                    "Monitoring",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF1F2937),
+            return RefreshIndicator(
+              onRefresh: () async {
+                final future = _repository.getMonitoringPatients();
+                setState(() => _patientsFuture = future);
+                await future;
+              },
+              child: SingleChildScrollView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Monitoring",
+                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
                     ),
-                  ),
-                  const SizedBox(height: 20),
-                  
-                  // Melakukan perulangan (mapping) data pasien menjadi komponen kartu
-                  ...patients.map((patient) => PatientCard(patient: patient)),
-                ],
+                    const SizedBox(height: 20),
+                    ...patients.map((patient) => PatientCard(patient: patient)),
+                  ],
+                ),
               ),
             );
           }
           return const SizedBox.shrink();
         },
       ),
-      // MENGGUNAKAN GLOBAL BOTTOM NAV (Index 2 untuk Monitoring)
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 2), 
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
 }
 
-// ============================================================================
-// 2. KOMPONEN: KARTU PASIEN (PATIENT CARD)
-// Berisi detail individu pasien seperti status, ID, lokasi, dan progress bar.
-// Dipisah menjadi class agar bisa digunakan ulang dan kodenya lebih bersih.
-// ============================================================================
 class PatientCard extends StatelessWidget {
   final Patient patient;
 
@@ -94,18 +75,14 @@ class PatientCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Menentukan warna badge berdasarkan kata kunci status (STABIL / STABLE)
-    bool isStable = patient.status.toUpperCase().contains("STABIL") || 
-                    patient.status.toUpperCase().contains("STABLE");
+    final bool isStable = patient.status.toUpperCase().contains("STABIL") ||
+        patient.status.toUpperCase().contains("STABLE");
 
-    // BUNGKUS DENGAN INKWELL AGAR BISA DIKLIK DAN PINDAH HALAMAN
     return InkWell(
       onTap: () {
         Navigator.push(
           context,
-          MaterialPageRoute(
-            builder: (context) => PatientDetailPage(patient: patient),
-          ),
+          MaterialPageRoute(builder: (context) => PatientDetailPage(patient: patient)),
         );
       },
       borderRadius: BorderRadius.circular(16),
@@ -126,14 +103,13 @@ class PatientCard extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- BAGIAN ATAS: Avatar & Badge Status ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                    color: const Color(0xFFEBF5FF), // Biru sangat muda
+                    color: const Color(0xFFEBF5FF),
                     borderRadius: BorderRadius.circular(12),
                   ),
                   child: const Icon(Icons.person_outline, color: Color(0xFF0052CC)),
@@ -156,15 +132,10 @@ class PatientCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 16),
-            
-            // --- BAGIAN TENGAH: Nama, ID, & Lokasi ---
-            Text(
-              patient.name,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
+            Text(patient.name, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 4),
             Text(
-              "ID: ${patient.id}",
+              "ID: ${patient.nik ?? patient.id}",
               style: const TextStyle(fontSize: 12, color: Colors.grey),
             ),
             const SizedBox(height: 12),
@@ -172,22 +143,14 @@ class PatientCard extends StatelessWidget {
               children: [
                 const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(
-                  patient.location,
-                  style: const TextStyle(fontSize: 13, color: Colors.black87),
-                ),
+                Text(patient.location, style: const TextStyle(fontSize: 13, color: Colors.black87)),
               ],
             ),
             const SizedBox(height: 24),
-            
-            // --- BAGIAN BAWAH: Progress Bar Fase Perawatan ---
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  patient.phase,
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
-                ),
+                Text(patient.phase, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                 Text(
                   "MONTH ${patient.currentMonth} OF ${patient.totalMonths}",
                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
@@ -198,10 +161,10 @@ class PatientCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
-                value: patient.currentMonth / patient.totalMonths, // Menghitung rasio progress
+                value: patient.currentMonth / patient.totalMonths,
                 minHeight: 8,
                 backgroundColor: Colors.grey[300],
-                color: const Color(0xFF2C3E50), // Warna biru gelap sesuai figma
+                color: const Color(0xFF2C3E50),
               ),
             ),
           ],

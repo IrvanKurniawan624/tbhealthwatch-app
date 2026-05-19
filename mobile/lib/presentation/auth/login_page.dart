@@ -2,9 +2,6 @@ import 'package:flutter/material.dart';
 import '../../core/api_client.dart';
 import '../monitoring/monitoring_page.dart';
 
-// ============================================================================
-// 1. HALAMAN UTAMA LOGIN
-// ============================================================================
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -60,7 +57,6 @@ class _LoginPageState extends State<LoginPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // Menggunakan SafeArea agar konten tidak tertutup notch/status bar HP
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 32.0, vertical: 48.0),
@@ -86,9 +82,6 @@ class _LoginPageState extends State<LoginPage> {
   }
 }
 
-// ============================================================================
-// 2. KOMPONEN: HEADER (Logo & Teks Selamat Datang)
-// ============================================================================
 class LoginHeader extends StatelessWidget {
   const LoginHeader({super.key});
 
@@ -99,7 +92,8 @@ class LoginHeader extends StatelessWidget {
         Image.asset(
           'assets/images/logo.png',
           height: 60,
-          errorBuilder: (context, error, stackTrace) => const Icon(Icons.health_and_safety, size: 60, color: Color(0xFF0052CC)),
+          errorBuilder: (context, error, stackTrace) =>
+              const Icon(Icons.health_and_safety, size: 60, color: Color(0xFF0052CC)),
         ),
         const SizedBox(height: 32),
         const Text(
@@ -116,11 +110,7 @@ class LoginHeader extends StatelessWidget {
           child: Text(
             "Sign in to continue monitoring patient health.",
             textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              color: Colors.grey,
-              height: 1.5,
-            ),
+            style: TextStyle(fontSize: 14, color: Colors.grey, height: 1.5),
           ),
         ),
       ],
@@ -128,9 +118,6 @@ class LoginHeader extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 3. KOMPONEN: FORM LOGIN & TOMBOL
-// ============================================================================
 class LoginForm extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController passwordController;
@@ -150,47 +137,40 @@ class LoginForm extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        // --- Input Email ---
-        const Text("EMAIL / MEDICAL ID", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0)),
-        const SizedBox(height: 8),
-        _buildTextField(
-          controller: emailController,
-          hintText: "admin@gmail.com",
-          icon: Icons.badge_outlined,
+        const Text(
+          "EMAIL / MEDICAL ID",
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0),
         ),
+        const SizedBox(height: 8),
+        _buildTextField(controller: emailController, hintText: "admin@gmail.com", icon: Icons.badge_outlined),
         const SizedBox(height: 20),
-
-        // --- Input Password & Lupa Password ---
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
-            const Text("PASSWORD", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0)),
+            const Text(
+              "PASSWORD",
+              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0),
+            ),
             GestureDetector(
-              onTap: () {
-                // Aksi lupa password
-              },
-              child: const Text("Forgot Password?", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0052CC))),
+              onTap: () {},
+              child: const Text(
+                "Forgot Password?",
+                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0052CC)),
+              ),
             ),
           ],
         ),
         const SizedBox(height: 8),
-        _buildTextField(
-          controller: passwordController,
-          hintText: "••••••••",
-          icon: Icons.lock_outline,
-          isPassword: true,
-        ),
+        _buildTextField(controller: passwordController, hintText: "••••••••", icon: Icons.lock_outline, isPassword: true),
         const SizedBox(height: 32),
-
-        // --- Tombol Sign In ---
         SizedBox(
           width: double.infinity,
           child: ElevatedButton(
             onPressed: isLoading ? null : onLogin,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0052CC), // Biru gelap
+              backgroundColor: const Color(0xFF0052CC),
               padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)), // Tombol membulat
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
               elevation: 0,
             ),
             child: isLoading
@@ -213,7 +193,6 @@ class LoginForm extends StatelessWidget {
     );
   }
 
-  // Widget custom khusus untuk TextField di halaman login
   Widget _buildTextField({
     required TextEditingController controller,
     required String hintText,
@@ -229,7 +208,7 @@ class LoginForm extends StatelessWidget {
         hintStyle: const TextStyle(color: Colors.grey),
         prefixIcon: Icon(icon, color: Colors.grey, size: 20),
         filled: true,
-        fillColor: Colors.grey[200], // Background abu-abu
+        fillColor: Colors.grey[200],
         contentPadding: const EdgeInsets.symmetric(vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
@@ -240,9 +219,6 @@ class LoginForm extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 4. KOMPONEN: FOOTER (Disclaimer)
-// ============================================================================
 class LoginFooter extends StatelessWidget {
   const LoginFooter({super.key});
 
@@ -253,7 +229,7 @@ class LoginFooter extends StatelessWidget {
         Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: const [
-            Icon(Icons.circle, size: 8, color: Color(0xFF8B4513)), // Titik coklat
+            Icon(Icons.circle, size: 8, color: Color(0xFF8B4513)),
             SizedBox(width: 8),
             Text(
               "SECURE CLINICAL NETWORK",
@@ -265,11 +241,7 @@ class LoginFooter extends StatelessWidget {
         const Text(
           "Unauthorized access to health data is strictly\nprohibited under regional medical data protection\nregulations. Surabaya Health Dept. 2024.",
           textAlign: TextAlign.center,
-          style: TextStyle(
-            fontSize: 9,
-            color: Colors.grey,
-            height: 1.5,
-          ),
+          style: TextStyle(fontSize: 9, color: Colors.grey, height: 1.5),
         ),
       ],
     );

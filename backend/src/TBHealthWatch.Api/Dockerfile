@@ -7,7 +7,7 @@ COPY src/TBHealthWatch.Application/TBHealthWatch.Application.csproj src/TBHealth
 COPY src/TBHealthWatch.Domain/TBHealthWatch.Domain.csproj src/TBHealthWatch.Domain/
 COPY src/TBHealthWatch.Infrastructure/TBHealthWatch.Infrastructure.csproj src/TBHealthWatch.Infrastructure/
 
-RUN dotnet restore
+RUN dotnet restore src/TBHealthWatch.Api/TBHealthWatch.Api.csproj
 
 COPY src/ src/
 

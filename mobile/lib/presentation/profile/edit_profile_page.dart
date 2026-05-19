@@ -5,10 +5,6 @@ import '../../data/repositories/profile_repository.dart';
 import '../widgets/custom_bottom_nav.dart';
 import '../widgets/custom_app_bar.dart';
 
-// ============================================================================
-// 1. HALAMAN UTAMA (ROOT PAGE - STATEFUL)
-// Halaman ini bertugas menyimpan "State" (Controller form) dan merakit komponen.
-// ============================================================================
 class EditProfilePage extends StatefulWidget {
   final Profile profile;
   final IProfileRepository? repository;
@@ -20,7 +16,6 @@ class EditProfilePage extends StatefulWidget {
 }
 
 class _EditProfilePageState extends State<EditProfilePage> {
-  // --- Kumpulan Controller untuk Form ---
   late TextEditingController _nameController;
   late TextEditingController _roleController;
   late TextEditingController _locationController;
@@ -41,7 +36,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _emailController = TextEditingController(text: widget.profile.email);
     _phoneController = TextEditingController(text: widget.profile.phone);
     _addressController = TextEditingController(text: widget.profile.address.replaceAll('\n', ' '));
-
     _selectedWilayah = widget.profile.wilayah ?? 'Gubeng';
     _loadRegions();
   }
@@ -60,7 +54,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
 
   @override
   void dispose() {
-    // Wajib dibersihkan agar aplikasi tidak berat (memory leak)
     _nameController.dispose();
     _roleController.dispose();
     _locationController.dispose();
@@ -70,11 +63,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  void _handleSave() {
-    _doSave();
-  }
-
-  Future<void> _doSave() async {
+  Future<void> _handleSave() async {
     final regionId = _regionsData
         .where((r) => r['name'] == _selectedWilayah)
         .map((r) => r['id'] as String)
@@ -92,11 +81,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
       phone: _phoneController.text,
       address: _addressController.text,
     );
+
     if (widget.repository != null) {
       try {
         await widget.repository!.updateProfileData(updatedProfile);
       } catch (_) {}
     }
+
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Perubahan berhasil disimpan!")),
@@ -109,42 +100,30 @@ class _EditProfilePageState extends State<EditProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      // MENGGUNAKAN GLOBAL APP BAR (Dengan Tombol Back)
-      appBar: const CustomAppBar(showBackButton: true), 
+      appBar: const CustomAppBar(showBackButton: true),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(20.0),
         child: Column(
           children: [
             const AvatarEditSection(),
             const SizedBox(height: 24),
-            
-            // <-- Memanggil Form Utama, mengirimkan controller kepadanya
             MainInformationForm(
               nameController: _nameController,
               roleController: _roleController,
               locationController: _locationController,
               selectedWilayah: _selectedWilayah,
               wilayahList: _wilayahList,
-              onWilayahChanged: (newValue) {
-                setState(() {
-                  _selectedWilayah = newValue;
-                });
-              },
+              onWilayahChanged: (newValue) => setState(() => _selectedWilayah = newValue),
             ),
             const SizedBox(height: 24),
-            
-            // <-- Memanggil Form Kontak
             ContactDetailForm(
               emailController: _emailController,
               phoneController: _phoneController,
               addressController: _addressController,
             ),
             const SizedBox(height: 24),
-            
             const InfoBanner(),
             const SizedBox(height: 32),
-            
-            // <-- Memanggil Tombol Aksi
             ActionButtons(
               onSave: _handleSave,
               onCancel: () => Navigator.pop(context),
@@ -152,15 +131,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
           ],
         ),
       ),
-      // MENGGUNAKAN GLOBAL BOTTOM NAV DI SINI
       bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
     );
   }
 }
 
-// ============================================================================
-// 2. KOMPONEN: AVATAR EDIT
-// ============================================================================
 class AvatarEditSection extends StatelessWidget {
   const AvatarEditSection({super.key});
 
@@ -180,7 +155,8 @@ class AvatarEditSection extends StatelessWidget {
             padding: const EdgeInsets.all(16.0),
             child: Image.asset(
               'assets/images/logo.png',
-              errorBuilder: (context, error, stackTrace) => const Icon(Icons.monitor_heart, size: 50, color: Colors.red),
+              errorBuilder: (context, error, stackTrace) =>
+                  const Icon(Icons.monitor_heart, size: 50, color: Colors.red),
             ),
           ),
         ),
@@ -189,10 +165,7 @@ class AvatarEditSection extends StatelessWidget {
           right: -5,
           child: Container(
             padding: const EdgeInsets.all(6),
-            decoration: const BoxDecoration(
-              color: Color(0xFF0052CC),
-              shape: BoxShape.circle,
-            ),
+            decoration: const BoxDecoration(color: Color(0xFF0052CC), shape: BoxShape.circle),
             child: const Icon(Icons.camera_alt, color: Colors.white, size: 16),
           ),
         ),
@@ -201,9 +174,6 @@ class AvatarEditSection extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 3. KOMPONEN: FORM INFORMASI UTAMA
-// ============================================================================
 class MainInformationForm extends StatelessWidget {
   final TextEditingController nameController;
   final TextEditingController roleController;
@@ -269,9 +239,9 @@ class MainInformationForm extends StatelessWidget {
               icon: const Icon(Icons.keyboard_arrow_down, color: Colors.grey),
               style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500, color: Colors.black),
               onChanged: onWilayahChanged,
-              items: wilayahList.map<DropdownMenuItem<String>>((String value) {
-                return DropdownMenuItem<String>(value: value, child: Text(value));
-              }).toList(),
+              items: wilayahList
+                  .map<DropdownMenuItem<String>>((v) => DropdownMenuItem<String>(value: v, child: Text(v)))
+                  .toList(),
             ),
           ),
         ),
@@ -280,9 +250,6 @@ class MainInformationForm extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 4. KOMPONEN: FORM DETAIL KONTAK
-// ============================================================================
 class ContactDetailForm extends StatelessWidget {
   final TextEditingController emailController;
   final TextEditingController phoneController;
@@ -325,9 +292,6 @@ class ContactDetailForm extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 5. WIDGET BANTUAN: CUSTOM TEXT FIELD (Bisa Dipakai Berulang-ulang)
-// ============================================================================
 class CustomTextField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
@@ -363,9 +327,6 @@ class CustomTextField extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 6. KOMPONEN: BANNER INFO (Kuning)
-// ============================================================================
 class InfoBanner extends StatelessWidget {
   const InfoBanner({super.key});
 
@@ -373,10 +334,7 @@ class InfoBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFFFFF7E6),
-        borderRadius: BorderRadius.circular(12),
-      ),
+      decoration: BoxDecoration(color: const Color(0xFFFFF7E6), borderRadius: BorderRadius.circular(12)),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: const [
@@ -394,9 +352,6 @@ class InfoBanner extends StatelessWidget {
   }
 }
 
-// ============================================================================
-// 7. KOMPONEN: TOMBOL AKSI
-// ============================================================================
 class ActionButtons extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onCancel;

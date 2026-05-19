@@ -6,7 +6,6 @@ class Patient {
   final String phase;
   final int currentMonth;
   final int totalMonths;
-  // Detail fields — null when constructed from list endpoint
   final String? nik;
   final String? phone;
   final String? address;
