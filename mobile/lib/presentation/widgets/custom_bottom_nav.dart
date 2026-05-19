@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../profile/profile_page.dart';
 import '../monitoring/monitoring_page.dart';
 import '../tracing/tracing_map_page.dart';
+import '../surveillance/surveillance_page.dart';
 
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -15,9 +16,12 @@ class CustomBottomNav extends StatelessWidget {
 
     // Ganti halaman dengan PushReplacement agar halamannya tidak menumpuk
     switch (index) {
-      // case 0:
-      //   Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const SurveillancePage()));
-      //   break;
+      case 0:
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const SurveillancePage()),
+        );
+        break;
       case 1:
         Navigator.pushReplacement(
           context,
