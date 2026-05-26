@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../core/api_client.dart';
-import '../../data/models/patient_model.dart';
 import '../../data/repositories/api_patient_repository.dart';
 
 // ─────────────────────────────────────────────
-// COLOR CONSTANTS (Synchronized with Create)
+// COLOR CONSTANTS
 // ─────────────────────────────────────────────
 
 class TBColors {
@@ -26,30 +25,32 @@ class TBColors {
 }
 
 // ─────────────────────────────────────────────
-// EDIT PATIENT PAGE (Synchronized with Create)
+// CREATE PATIENT PAGE (Updated from InputPasienScreen)
 // ─────────────────────────────────────────────
 
-class EditPatientPage extends StatefulWidget {
-  final Patient patient;
-
-  const EditPatientPage({super.key, required this.patient});
+class CreatePatientPage extends StatefulWidget {
+  const CreatePatientPage({super.key});
 
   @override
-  State<EditPatientPage> createState() => _EditPatientPageState();
+  State<CreatePatientPage> createState() => _CreatePatientPageState();
 }
 
-class _EditPatientPageState extends State<EditPatientPage> {
+class _CreatePatientPageState extends State<CreatePatientPage> {
   final _formKey = GlobalKey<FormState>();
 
   // Controllers
-  late TextEditingController _namaController;
-  late TextEditingController _tanggalLahirController;
-  late TextEditingController _nikController;
-  late TextEditingController _nomorTelefonController;
+  final _namaController = TextEditingController();
+  final _tanggalLahirController = TextEditingController();
+  final _nikController = TextEditingController();
+  final _nomorTelefonController = TextEditingController();
 
+  // For Region Dropdown (Matching Backend Requirement)
   final _repo = ApiPatientRepository(ApiClient());
   List<Map<String, dynamic>> _regions = [];
   String? _selectedRegionId;
+
+  // Auto-generated ID (visual only as per user design)
+  final String _generatedId = 'TB-2024-1999999';
 
   // Phase dropdown
   int _selectedPhase = 1;
@@ -60,17 +61,6 @@ class _EditPatientPageState extends State<EditPatientPage> {
   @override
   void initState() {
     super.initState();
-    _namaController = TextEditingController(text: widget.patient.name);
-    _tanggalLahirController = TextEditingController(text: widget.patient.dob ?? '');
-    _nikController = TextEditingController(text: widget.patient.nik ?? widget.patient.id);
-    _nomorTelefonController = TextEditingController(text: widget.patient.phone ?? '');
-    
-    // Extract current phase from patient model (assuming it's numeric or parsable)
-    // For now, default to 1 if not easily mapped
-    if (widget.patient.phase.contains('2')) {
-      _selectedPhase = 2;
-    }
-
     _loadRegions();
   }
 
@@ -80,11 +70,6 @@ class _EditPatientPageState extends State<EditPatientPage> {
       if (mounted) {
         setState(() {
           _regions = data.cast<Map<String, dynamic>>();
-          final match = _regions.firstWhere(
-            (r) => r['name'] == widget.patient.regionName,
-            orElse: () => {},
-          );
-          _selectedRegionId = match['id'] as String?;
         });
       }
     } catch (_) {}
@@ -101,17 +86,10 @@ class _EditPatientPageState extends State<EditPatientPage> {
 
   // ── DATE PICKER ──────────────────────────────
   Future<void> _pickTanggalLahir() async {
-    DateTime initialDate = DateTime(1990);
-    if (_tanggalLahirController.text.isNotEmpty) {
-      try {
-        initialDate = DateTime.parse(_tanggalLahirController.text);
-      } catch (_) {}
-    }
-
     final now = DateTime.now();
     final picked = await showDatePicker(
       context: context,
-      initialDate: initialDate,
+      initialDate: DateTime(1990),
       firstDate: DateTime(1940),
       lastDate: now,
       builder: (context, child) {
@@ -141,9 +119,8 @@ class _EditPatientPageState extends State<EditPatientPage> {
     setState(() => _isLoading = true);
 
     try {
-      await _repo.update(widget.patient.id, {
+      await _repo.create({
         'fullName': _namaController.text.trim(),
-        // NIK is usually not editable in update, but we send it if needed
         'nik': _nikController.text.trim(),
         if (_tanggalLahirController.text.isNotEmpty)
           'dob': _tanggalLahirController.text,
@@ -157,7 +134,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Data pasien berhasil diperbarui!'),
+          content: const Text('Data pasien berhasil disimpan!'),
           backgroundColor: TBColors.primary,
           behavior: SnackBarBehavior.floating,
           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
@@ -217,7 +194,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
                     _buildDateField(),
                     const SizedBox(height: 20),
 
-                    // Wilayah
+                    // Wilayah (Changed to Dropdown for API Integration)
                     _buildLabel('Wilayah'),
                     const SizedBox(height: 8),
                     _buildRegionDropdown(),
@@ -239,10 +216,23 @@ class _EditPatientPageState extends State<EditPatientPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // NIK (Read-only on Edit usually, but keeping field for consistency)
+                    // NIK / ID
                     _buildLabel('NIK'),
                     const SizedBox(height: 8),
-                    _buildReadOnlyField(_nikController.text),
+                    _buildTextField(
+                      controller: _nikController,
+                      hint: 'Masukkan 16 digit NIK',
+                      keyboardType: TextInputType.number,
+                      inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                      validator: (v) =>
+                          (v == null || v.isEmpty) ? 'NIK wajib diisi' : null,
+                    ),
+                    const SizedBox(height: 20),
+
+                    // Generated ID (Visual only as per design)
+                    _buildLabel('Generated Id'),
+                    const SizedBox(height: 8),
+                    _buildReadOnlyField(_generatedId),
                     const SizedBox(height: 20),
 
                     // Phase dropdown
@@ -261,7 +251,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
     );
   }
 
-  // ── TOP BAR (Synchronized) ───────────────────
+  // ── TOP BAR with progress ────────────────────
   Widget _buildTopBar() {
     return SafeArea(
       bottom: false,
@@ -276,7 +266,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
               onPressed: () => Navigator.maybePop(context),
             ),
           ),
-          // Progress bar — fully active on edit
+          // Progress bar — step 1 of 2
           Row(
             children: [
               Expanded(
@@ -288,7 +278,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
               Expanded(
                 child: Container(
                   height: 3,
-                  color: TBColors.progressActive,
+                  color: TBColors.progressInactive,
                 ),
               ),
             ],
@@ -301,7 +291,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
   // ── PAGE TITLE ───────────────────────────────
   Widget _buildPageTitle() {
     return const Text(
-      'Edit Data Pasien',
+      'Input Data Pasien baru',
       style: TextStyle(
         fontSize: 22,
         fontWeight: FontWeight.w700,
@@ -379,7 +369,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
     );
   }
 
-  // ── READ-ONLY FIELD (NIK) ────────────────────
+  // ── READ-ONLY FIELD (ID) ─────────────────────
   Widget _buildReadOnlyField(String value) {
     return Container(
       width: double.infinity,
@@ -469,7 +459,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
     );
   }
 
-  // ── SUBMIT BUTTON (EDIT) ─────────────────────
+  // ── SUBMIT BUTTON ────────────────────────────
   Widget _buildSubmitButton() {
     return Container(
       color: Colors.white,
@@ -506,7 +496,7 @@ class _EditPatientPageState extends State<EditPatientPage> {
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
-                      'EDIT',
+                      'INPUT',
                       style: TextStyle(
                         fontSize: 15,
                         fontWeight: FontWeight.w700,

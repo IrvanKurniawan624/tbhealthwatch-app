@@ -26,4 +26,10 @@ class ApiPatientRepository implements IPatientRepository {
         await _client.put('/patients/$id', body) as Map<String, dynamic>;
     return Patient.fromJson(data);
   }
+
+  Future<Patient> create(Map<String, dynamic> body) async {
+    final data =
+        await _client.post('/patients', body) as Map<String, dynamic>;
+    return Patient.fromJson(data);
+  }
 }

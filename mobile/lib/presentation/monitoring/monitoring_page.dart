@@ -5,6 +5,7 @@ import '../../data/repositories/api_patient_repository.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'patient_detail_page.dart';
+import 'create_patient_page.dart';
 
 class MonitoringPage extends StatefulWidget {
   const MonitoringPage({super.key});
@@ -62,6 +63,20 @@ class _MonitoringPageState extends State<MonitoringPage> {
           }
           return const SizedBox.shrink();
         },
+      ),
+      floatingActionButton: FloatingActionButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const CreatePatientPage()),
+          );
+          if (result == true) {
+            final future = _repository.getMonitoringPatients();
+            setState(() => _patientsFuture = future);
+          }
+        },
+        backgroundColor: const Color(0xFF0052CC),
+        child: const Icon(Icons.add, color: Colors.white),
       ),
       bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
