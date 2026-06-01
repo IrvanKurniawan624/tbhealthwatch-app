@@ -17,4 +17,8 @@ public class RegionsController : ControllerBase
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<RegionDto>>> List(CancellationToken ct)
         => Ok(await _regions.ListAsync(ct));
+
+    [HttpGet("stats")]
+    public async Task<ActionResult<IReadOnlyList<RegionStatsDto>>> Stats(CancellationToken ct)
+        => Ok(await _regions.ListStatsAsync(ct));
 }

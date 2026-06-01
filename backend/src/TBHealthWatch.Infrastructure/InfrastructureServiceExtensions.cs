@@ -28,6 +28,7 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IPatientRepository, PatientRepository>();
         services.AddScoped<IAdherenceRepository, AdherenceRepository>();
         services.AddScoped<IRegionRepository, RegionRepository>();
+        services.AddScoped<ISurveillanceRepository, SurveillanceRepository>();
         services.AddScoped<ICurrentUserService, CurrentUserService>();
 
         return services;

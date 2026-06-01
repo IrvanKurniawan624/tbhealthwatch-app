@@ -31,6 +31,45 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
     _loadAll();
   }
 
+  Future<void> _confirmDelete(BuildContext context, Patient patient) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Hapus Pasien'),
+        content: Text('Yakin ingin menghapus data "${patient.name}"? Tindakan ini tidak dapat dibatalkan.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Batal'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, true),
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    try {
+      await _patientRepo.delete(patient.id);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Pasien berhasil dihapus')),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Gagal menghapus: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _loadAll() async {
     setState(() { _loading = true; _error = null; });
     try {
@@ -128,23 +167,37 @@ class _PatientDetailPageState extends State<PatientDetailPage> {
         const SizedBox(height: 4),
         _buildInfoRow("Tanggal Lahir:", patient.dob ?? '-'),
         const SizedBox(height: 20),
-        Center(
-          child: ElevatedButton.icon(
-            onPressed: () async {
-              final updated = await Navigator.push<bool>(
-                context,
-                MaterialPageRoute(builder: (context) => EditPatientPage(patient: patient)),
-              );
-              if (updated == true) await _loadAll();
-            },
-            icon: const Icon(Icons.edit_document, size: 16, color: Colors.white),
-            label: const Text("EDIT DATA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF0052CC),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () async {
+                final updated = await Navigator.push<bool>(
+                  context,
+                  MaterialPageRoute(builder: (context) => EditPatientPage(patient: patient)),
+                );
+                if (updated == true) await _loadAll();
+              },
+              icon: const Icon(Icons.edit_document, size: 16, color: Colors.white),
+              label: const Text("EDIT DATA", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF0052CC),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
             ),
-          ),
+            const SizedBox(width: 12),
+            OutlinedButton.icon(
+              onPressed: () => _confirmDelete(context, patient),
+              icon: const Icon(Icons.delete_outline, size: 16, color: Colors.red),
+              label: const Text("HAPUS", style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                side: const BorderSide(color: Colors.red),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+            ),
+          ],
         ),
       ],
     );

@@ -1,10 +1,13 @@
-import 'dart:convert';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:convert';
+
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 
+import '../../core/api_client.dart';
+import '../../data/models/region_stats_model.dart';
+import '../../data/repositories/api_surveillance_repository.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_bottom_nav.dart';
 
@@ -17,70 +20,18 @@ class TracingMapPage extends StatefulWidget {
 
 class _TracingMapPageState extends State<TracingMapPage> {
   final MapController _mapController = MapController();
+  final _repo = ApiSurveillanceRepository(ApiClient());
 
   bool _isLoading = true;
   String? _errorMessage;
 
-  List<DistrictPolygon> _districtPolygons = [];
-  RegionTraceData? _selectedRegion;
-
-  final Map<String, RegionTraceData> _hardcodedRegionData = {
-    'Genteng': RegionTraceData(
-      name: 'Genteng',
-      patientCount: 12,
-      riskLevel: RiskLevel.stable,
-    ),
-    'Simokerto': RegionTraceData(
-      name: 'Simokerto',
-      patientCount: 24,
-      riskLevel: RiskLevel.warning,
-    ),
-    'Semampir': RegionTraceData(
-      name: 'Semampir',
-      patientCount: 35,
-      riskLevel: RiskLevel.warning,
-    ),
-    'Kenjeran': RegionTraceData(
-      name: 'Kenjeran',
-      patientCount: 67,
-      riskLevel: RiskLevel.high,
-    ),
-    'Bulak': RegionTraceData(
-      name: 'Bulak',
-      patientCount: 8,
-      riskLevel: RiskLevel.stable,
-    ),
-    'Wonokromo': RegionTraceData(
-      name: 'Wonokromo',
-      patientCount: 72,
-      riskLevel: RiskLevel.high,
-    ),
-    'Gubeng': RegionTraceData(
-      name: 'Gubeng',
-      patientCount: 41,
-      riskLevel: RiskLevel.warning,
-    ),
-    'Tambaksari': RegionTraceData(
-      name: 'Tambaksari',
-      patientCount: 58,
-      riskLevel: RiskLevel.high,
-    ),
-    'Rungkut': RegionTraceData(
-      name: 'Rungkut',
-      patientCount: 18,
-      riskLevel: RiskLevel.stable,
-    ),
-    'Tegalsari': RegionTraceData(
-      name: 'Tegalsari',
-      patientCount: 29,
-      riskLevel: RiskLevel.warning,
-    ),
-  };
+  List<_DistrictPolygon> _districtPolygons = [];
+  RegionStats? _selectedRegion;
 
   @override
   void initState() {
     super.initState();
-    _loadGeoJson();
+    _loadData();
   }
 
   @override
@@ -89,166 +40,145 @@ class _TracingMapPageState extends State<TracingMapPage> {
     super.dispose();
   }
 
-  Future<void> _loadGeoJson() async {
+  Future<void> _loadData() async {
     try {
-      final rawGeoJson = await rootBundle.loadString(
-        'assets/geojson/surabaya_kecamatan.json',
-      );
+      final results = await Future.wait([
+        rootBundle.loadString('assets/geojson/surabaya_kecamatan.json'),
+        _repo.getRegionStats(),
+      ]);
+
+      final rawGeoJson = results[0] as String;
+      final regionStats = results[1] as List<RegionStats>;
+
+      final statsMap = {for (final r in regionStats) r.name.toUpperCase(): r};
 
       final decoded = jsonDecode(rawGeoJson) as Map<String, dynamic>;
       final features = decoded['features'] as List<dynamic>;
 
-      final List<DistrictPolygon> loadedPolygons = [];
+      final List<_DistrictPolygon> loaded = [];
 
       for (final feature in features) {
         final featureMap = feature as Map<String, dynamic>;
-
         final properties = featureMap['properties'] as Map<String, dynamic>;
         final geometry = featureMap['geometry'] as Map<String, dynamic>;
 
-        final districtName = properties['name']?.toString() ?? 'Unknown';
+        final rawName = properties['name']?.toString() ?? 'Unknown';
         final geometryType = geometry['type']?.toString();
         final coordinates = geometry['coordinates'];
 
-        final traceData =
-            _hardcodedRegionData[districtName] ??
-            RegionTraceData(
-              name: districtName,
+        final stats = statsMap[rawName.toUpperCase()] ??
+            RegionStats(
+              id: '',
+              name: rawName,
               patientCount: 0,
-              riskLevel: RiskLevel.stable,
+              riskLevel: 'stable',
             );
 
-        if (geometryType == 'Polygon') {
-          final polygonPoints = _parsePolygonCoordinates(coordinates);
-
-          if (polygonPoints.isNotEmpty) {
-            loadedPolygons.add(
-              DistrictPolygon(
-                name: districtName,
-                points: polygonPoints,
-                traceData: traceData,
-              ),
-            );
+        void addPolygon(dynamic coords) {
+          final points = _parsePolygon(coords);
+          if (points.isNotEmpty) {
+            loaded.add(_DistrictPolygon(name: rawName, points: points, stats: stats));
           }
         }
 
-        if (geometryType == 'MultiPolygon') {
-          final multiPolygon = coordinates as List<dynamic>;
-
-          for (final polygon in multiPolygon) {
-            final polygonPoints = _parsePolygonCoordinates(polygon);
-
-            if (polygonPoints.isNotEmpty) {
-              loadedPolygons.add(
-                DistrictPolygon(
-                  name: districtName,
-                  points: polygonPoints,
-                  traceData: traceData,
-                ),
-              );
-            }
+        if (geometryType == 'Polygon') {
+          addPolygon(coordinates);
+        } else if (geometryType == 'MultiPolygon') {
+          for (final poly in coordinates as List<dynamic>) {
+            addPolygon(poly);
           }
         }
       }
 
-      setState(() {
-        _districtPolygons = loadedPolygons;
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _districtPolygons = loaded;
+          _isLoading = false;
+        });
+      }
     } catch (error) {
-      setState(() {
-        _errorMessage = error.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _errorMessage = error.toString();
+          _isLoading = false;
+        });
+      }
     }
   }
 
-  List<LatLng> _parsePolygonCoordinates(dynamic coordinates) {
+  List<LatLng> _parsePolygon(dynamic coordinates) {
     final rings = coordinates as List<dynamic>;
-
     if (rings.isEmpty) return [];
-
-    // GeoJSON polygon:
-    // coordinates[0] = outer boundary
-    // coordinates[1..n] = holes, sementara kita abaikan dulu
-    final outerRing = rings.first as List<dynamic>;
-
-    return outerRing.map((point) {
-      final coordinate = point as List<dynamic>;
-
-      final longitude = (coordinate[0] as num).toDouble();
-      final latitude = (coordinate[1] as num).toDouble();
-
-      // GeoJSON = [longitude, latitude]
-      // flutter_map = LatLng(latitude, longitude)
-      return LatLng(latitude, longitude);
+    final outer = rings.first as List<dynamic>;
+    return outer.map((point) {
+      final coord = point as List<dynamic>;
+      return LatLng((coord[1] as num).toDouble(), (coord[0] as num).toDouble());
     }).toList();
   }
 
   LatLng? _calculateCenter(List<LatLng> points) {
     if (points.isEmpty) return null;
-    double totalLatitude = 0;
-    double totalLongitude = 0;
-    for (final point in points) {
-      totalLatitude += point.latitude;
-      totalLongitude += point.longitude;
+    double lat = 0, lng = 0;
+    for (final p in points) {
+      lat += p.latitude;
+      lng += p.longitude;
     }
-    final lat = totalLatitude / points.length;
-    final lng = totalLongitude / points.length;
-    if (!lat.isFinite || !lng.isFinite) return null;
-    return LatLng(lat, lng);
+    final avgLat = lat / points.length;
+    final avgLng = lng / points.length;
+    if (!avgLat.isFinite || !avgLng.isFinite) return null;
+    return LatLng(avgLat, avgLng);
   }
 
-  Color _fillColorByRisk(RiskLevel riskLevel) {
+  Color _fillColor(String riskLevel) {
     switch (riskLevel) {
-      case RiskLevel.high:
+      case 'high':
         return Colors.red.withOpacity(0.45);
-      case RiskLevel.warning:
+      case 'warning':
         return Colors.orange.withOpacity(0.45);
-      case RiskLevel.stable:
+      default:
         return Colors.green.withOpacity(0.35);
     }
   }
 
-  Color _borderColorByRisk(RiskLevel riskLevel) {
+  Color _borderColor(String riskLevel) {
     switch (riskLevel) {
-      case RiskLevel.high:
+      case 'high':
         return Colors.red.shade800;
-      case RiskLevel.warning:
+      case 'warning':
         return Colors.orange.shade800;
-      case RiskLevel.stable:
+      default:
         return Colors.green.shade800;
     }
   }
 
-  Color _bubbleColorByRisk(RiskLevel riskLevel) {
+  Color _bubbleColor(String riskLevel) {
     switch (riskLevel) {
-      case RiskLevel.high:
+      case 'high':
         return Colors.red.shade700;
-      case RiskLevel.warning:
+      case 'warning':
         return Colors.orange.shade700;
-      case RiskLevel.stable:
+      default:
         return Colors.green.shade700;
     }
   }
 
-  String _riskLabel(RiskLevel riskLevel) {
+  String _riskLabel(String riskLevel) {
     switch (riskLevel) {
-      case RiskLevel.high:
+      case 'high':
         return 'Risiko Tinggi';
-      case RiskLevel.warning:
+      case 'warning':
         return 'Peringatan';
-      case RiskLevel.stable:
+      default:
         return 'Stabil';
     }
   }
 
   List<Polygon> _buildPolygons() {
-    return _districtPolygons.map((district) {
+    return _districtPolygons.map((d) {
       return Polygon(
-        points: district.points,
-        color: _fillColorByRisk(district.traceData.riskLevel),
-        borderColor: _borderColorByRisk(district.traceData.riskLevel),
+        points: d.points,
+        color: _fillColor(d.stats.riskLevel),
+        borderColor: _borderColor(d.stats.riskLevel),
         borderStrokeWidth: 1.4,
       );
     }).toList();
@@ -257,10 +187,10 @@ class _TracingMapPageState extends State<TracingMapPage> {
   List<Marker> _buildMarkers() {
     final markers = <Marker>[];
     for (final district in _districtPolygons) {
-      if (district.traceData.patientCount == 0) continue;
+      if (district.stats.patientCount == 0) continue;
       final center = _calculateCenter(district.points);
       if (center == null) continue;
-      final traceData = district.traceData;
+      final stats = district.stats;
       markers.add(Marker(
         point: center,
         width: 46,
@@ -268,14 +198,14 @@ class _TracingMapPageState extends State<TracingMapPage> {
         child: GestureDetector(
           onTap: () {
             if (!mounted) return;
-            setState(() => _selectedRegion = traceData);
+            setState(() => _selectedRegion = stats);
             WidgetsBinding.instance.addPostFrameCallback((_) {
               if (mounted) _mapController.move(center, 12.5);
             });
           },
           child: Container(
             decoration: BoxDecoration(
-              color: _bubbleColorByRisk(traceData.riskLevel),
+              color: _bubbleColor(stats.riskLevel),
               shape: BoxShape.circle,
               border: Border.all(color: Colors.white, width: 2),
               boxShadow: [
@@ -288,7 +218,7 @@ class _TracingMapPageState extends State<TracingMapPage> {
             ),
             alignment: Alignment.center,
             child: Text(
-              traceData.patientCount.toString(),
+              stats.patientCount.toString(),
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 13,
@@ -365,13 +295,14 @@ class _TracingMapPageState extends State<TracingMapPage> {
   }
 
   Widget _buildTopSummaryCard() {
-    final totalPatients = _hardcodedRegionData.values.fold<int>(
+    final totalPatients = _districtPolygons.fold<int>(
       0,
-      (total, item) => total + item.patientCount,
+      (sum, d) => sum + d.stats.patientCount,
     );
-
-    final highRiskCount = _hardcodedRegionData.values
-        .where((item) => item.riskLevel == RiskLevel.high)
+    final highRiskCount = _districtPolygons
+        .where((d) => d.stats.riskLevel == 'high')
+        .map((d) => d.stats.name)
+        .toSet()
         .length;
 
     return Card(
@@ -440,7 +371,6 @@ class _TracingMapPageState extends State<TracingMapPage> {
 
   Widget _buildSelectedRegionCard() {
     final region = _selectedRegion!;
-
     return Card(
       elevation: 5,
       color: Colors.white,
@@ -454,7 +384,7 @@ class _TracingMapPageState extends State<TracingMapPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: _bubbleColorByRisk(region.riskLevel),
+                color: _bubbleColor(region.riskLevel),
                 shape: BoxShape.circle,
               ),
               alignment: Alignment.center,
@@ -504,7 +434,7 @@ class _TracingMapPageState extends State<TracingMapPage> {
       child: Padding(
         padding: const EdgeInsets.all(24),
         child: Text(
-          'Gagal memuat GeoJSON:\n$_errorMessage',
+          'Gagal memuat data:\n$_errorMessage',
           textAlign: TextAlign.center,
           style: const TextStyle(color: Colors.red),
         ),
@@ -513,29 +443,15 @@ class _TracingMapPageState extends State<TracingMapPage> {
   }
 }
 
-enum RiskLevel { stable, warning, high }
-
-class RegionTraceData {
-  final String name;
-  final int patientCount;
-  final RiskLevel riskLevel;
-
-  const RegionTraceData({
-    required this.name,
-    required this.patientCount,
-    required this.riskLevel,
-  });
-}
-
-class DistrictPolygon {
+class _DistrictPolygon {
   final String name;
   final List<LatLng> points;
-  final RegionTraceData traceData;
+  final RegionStats stats;
 
-  const DistrictPolygon({
+  const _DistrictPolygon({
     required this.name,
     required this.points,
-    required this.traceData,
+    required this.stats,
   });
 }
 

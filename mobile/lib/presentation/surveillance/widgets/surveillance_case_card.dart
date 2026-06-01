@@ -1,19 +1,59 @@
 import 'package:flutter/material.dart';
 
+import '../../../data/models/surveillance_model.dart';
 import '../surveillance_page.dart';
 import 'surveillance_impacted_area_row.dart';
 import 'surveillance_sheet_widgets.dart';
 
-class SurveillanceCaseCard extends StatelessWidget {
+class SurveillanceCaseCard extends StatefulWidget {
   final VoidCallback onOpenTracing;
+  final List<SurveillanceRegionSummary> topRegions;
 
   const SurveillanceCaseCard({
     super.key,
     required this.onOpenTracing,
+    required this.topRegions,
   });
 
   @override
+  State<SurveillanceCaseCard> createState() => _SurveillanceCaseCardState();
+}
+
+class _SurveillanceCaseCardState extends State<SurveillanceCaseCard> {
+  // 'all' | 'high' | 'warning' | 'stable'
+  String _selectedFilter = 'all';
+
+  List<SurveillanceRegionSummary> get _filteredRegions {
+    if (_selectedFilter == 'all') {
+      return widget.topRegions.take(2).toList();
+    }
+    return widget.topRegions
+        .where((r) => r.riskLevel == _selectedFilter)
+        .toList();
+  }
+
+  String get _filterLabel {
+    switch (_selectedFilter) {
+      case 'high':
+        return 'Risiko Tinggi';
+      case 'warning':
+        return 'Peringatan';
+      case 'stable':
+        return 'Stabil';
+      default:
+        return 'Filter Wilayah';
+    }
+  }
+
+  void _applyFilter(String filter) {
+    setState(() => _selectedFilter = filter);
+    Navigator.pop(context);
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final displayRegions = _filteredRegions;
+
     return Container(
       padding: const EdgeInsets.fromLTRB(22, 22, 22, 24),
       decoration: BoxDecoration(
@@ -43,7 +83,7 @@ class SurveillanceCaseCard extends StatelessWidget {
                 ),
               ),
               TextButton(
-                onPressed: onOpenTracing,
+                onPressed: widget.onOpenTracing,
                 style: TextButton.styleFrom(
                   foregroundColor: SurveillancePage.deepBlue,
                   padding: const EdgeInsets.symmetric(horizontal: 8),
@@ -110,21 +150,32 @@ class SurveillanceCaseCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 18),
-          SurveillanceImpactedAreaRow(
-            color: Colors.red,
-            region: 'Wilayah Wonokromo',
-            cases: '15 Active Cases',
-            riskText: 'Tinggi',
-            onTap: onOpenTracing,
-          ),
-          const SizedBox(height: 14),
-          SurveillanceImpactedAreaRow(
-            color: Colors.orange,
-            region: 'Wilayah Gubeng',
-            cases: '5 Active Cases',
-            riskText: 'Waspada',
-            onTap: onOpenTracing,
-          ),
+          if (displayRegions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                _selectedFilter == 'all'
+                    ? 'Belum ada data wilayah.'
+                    : 'Tidak ada wilayah dengan filter "$_filterLabel".',
+                style: const TextStyle(color: Color(0xFF8A9099)),
+              ),
+            )
+          else
+            ...List.generate(displayRegions.length, (i) {
+              final region = displayRegions[i];
+              final isHigh = region.riskLevel == 'high';
+              return Padding(
+                padding: EdgeInsets.only(
+                    bottom: i < displayRegions.length - 1 ? 14 : 0),
+                child: SurveillanceImpactedAreaRow(
+                  color: isHigh ? Colors.red : Colors.orange,
+                  region: 'Wilayah ${region.name}',
+                  cases: '${region.patientCount} Active Cases',
+                  riskText: isHigh ? 'Tinggi' : 'Waspada',
+                  onTap: widget.onOpenTracing,
+                ),
+              );
+            }),
           const SizedBox(height: 24),
           SizedBox(
             width: double.infinity,
@@ -132,13 +183,17 @@ class SurveillanceCaseCard extends StatelessWidget {
             child: ElevatedButton.icon(
               onPressed: () => _showRegionFilterSheet(context),
               icon: const Icon(Icons.filter_alt_outlined),
-              label: const Text('Filter Wilayah'),
+              label: Text(_filterLabel),
               style: ElevatedButton.styleFrom(
-                backgroundColor: SurveillancePage.deepBlue,
+                backgroundColor: _selectedFilter == 'all'
+                    ? SurveillancePage.deepBlue
+                    : const Color(0xFF003D99),
                 foregroundColor: Colors.white,
                 elevation: 0,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                textStyle: const TextStyle(fontWeight: FontWeight.w900, fontSize: 16),
+                shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16)),
+                textStyle: const TextStyle(
+                    fontWeight: FontWeight.w900, fontSize: 16),
               ),
             ),
           ),
@@ -155,7 +210,7 @@ class SurveillanceCaseCard extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-      builder: (context) {
+      builder: (ctx) {
         return Padding(
           padding: const EdgeInsets.fromLTRB(24, 6, 24, 28),
           child: Column(
@@ -170,25 +225,29 @@ class SurveillanceCaseCard extends StatelessWidget {
                 title: 'Semua Wilayah',
                 subtitle: 'Tampilkan seluruh wilayah Surabaya',
                 icon: Icons.public,
-                onTap: () => Navigator.pop(context),
+                isSelected: _selectedFilter == 'all',
+                onTap: () => _applyFilter('all'),
               ),
               SurveillanceFilterTile(
                 title: 'Risiko Tinggi',
                 subtitle: 'Wilayah dengan lonjakan kasus',
                 icon: Icons.warning_amber_rounded,
-                onTap: () => Navigator.pop(context),
+                isSelected: _selectedFilter == 'high',
+                onTap: () => _applyFilter('high'),
               ),
               SurveillanceFilterTile(
                 title: 'Peringatan',
                 subtitle: 'Wilayah dengan tren meningkat',
                 icon: Icons.error_outline,
-                onTap: () => Navigator.pop(context),
+                isSelected: _selectedFilter == 'warning',
+                onTap: () => _applyFilter('warning'),
               ),
               SurveillanceFilterTile(
                 title: 'Stabil',
                 subtitle: 'Wilayah dengan kondisi terkendali',
                 icon: Icons.check_circle_outline,
-                onTap: () => Navigator.pop(context),
+                isSelected: _selectedFilter == 'stable',
+                onTap: () => _applyFilter('stable'),
               ),
             ],
           ),
@@ -206,56 +265,87 @@ class SurveillanceCaseCard extends StatelessWidget {
       shape: const RoundedRectangleBorder(
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.fromLTRB(
-            24,
-            6,
-            24,
-            MediaQuery.of(context).viewInsets.bottom + 28,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SurveillanceSheetHeader(
-                title: 'Cari Wilayah atau Pasien',
-                subtitle: 'Fitur ini masih hardcode untuk tahap awal.',
-              ),
-              const SizedBox(height: 18),
-              TextField(
-                autofocus: true,
-                decoration: InputDecoration(
-                  hintText: 'Contoh: Wonokromo',
-                  prefixIcon: const Icon(Icons.search_rounded),
-                  filled: true,
-                  fillColor: const Color(0xFFF3F4F6),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(16),
-                    borderSide: BorderSide.none,
-                  ),
+      builder: (ctx) {
+        String query = '';
+        final maxHeight = MediaQuery.of(ctx).size.height * 0.75;
+
+        return StatefulBuilder(
+          builder: (ctx, setSheetState) {
+            final filtered = query.isEmpty
+                ? widget.topRegions.take(5).toList()
+                : widget.topRegions
+                    .where((r) =>
+                        r.name.toLowerCase().contains(query.toLowerCase()))
+                    .toList();
+
+            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
+
+            return ConstrainedBox(
+              constraints: BoxConstraints(maxHeight: maxHeight),
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(24, 6, 24, bottomInset + 28),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const SurveillanceSheetHeader(
+                      title: 'Cari Wilayah atau Pasien',
+                      subtitle: 'Wilayah dengan pasien aktif.',
+                    ),
+                    const SizedBox(height: 18),
+                    TextField(
+                      autofocus: true,
+                      onChanged: (v) => setSheetState(() => query = v),
+                      decoration: InputDecoration(
+                        hintText: 'Contoh: Wonokromo',
+                        prefixIcon: const Icon(Icons.search_rounded),
+                        filled: true,
+                        fillColor: const Color(0xFFF3F4F6),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(16),
+                          borderSide: BorderSide.none,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    if (filtered.isEmpty)
+                      const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Text(
+                          'Tidak ada wilayah yang cocok.',
+                          style: TextStyle(color: Color(0xFF8A9099)),
+                        ),
+                      )
+                    else
+                      Flexible(
+                        child: ListView(
+                          shrinkWrap: true,
+                          children: filtered.map((region) {
+                            String riskLabel;
+                            if (region.riskLevel == 'high') {
+                              riskLabel = 'Risiko tinggi';
+                            } else if (region.riskLevel == 'warning') {
+                              riskLabel = 'Peringatan';
+                            } else {
+                              riskLabel = 'Stabil';
+                            }
+                            return SurveillanceFilterTile(
+                              title: 'Wilayah ${region.name}',
+                              subtitle:
+                                  '${region.patientCount} kasus aktif • $riskLabel',
+                              icon: Icons.location_on_outlined,
+                              onTap: () {
+                                Navigator.pop(ctx);
+                                widget.onOpenTracing();
+                              },
+                            );
+                          }).toList(),
+                        ),
+                      ),
+                  ],
                 ),
               ),
-              const SizedBox(height: 18),
-              SurveillanceFilterTile(
-                title: 'Wilayah Wonokromo',
-                subtitle: '15 kasus aktif • Risiko tinggi',
-                icon: Icons.location_on_outlined,
-                onTap: () {
-                  Navigator.pop(context);
-                  onOpenTracing();
-                },
-              ),
-              SurveillanceFilterTile(
-                title: 'Wilayah Gubeng',
-                subtitle: '5 kasus aktif • Peringatan',
-                icon: Icons.location_on_outlined,
-                onTap: () {
-                  Navigator.pop(context);
-                  onOpenTracing();
-                },
-              ),
-            ],
-          ),
+            );
+          },
         );
       },
     );

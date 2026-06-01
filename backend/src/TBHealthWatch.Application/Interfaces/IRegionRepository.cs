@@ -5,4 +5,5 @@ namespace TBHealthWatch.Application.Interfaces;
 public interface IRegionRepository
 {
     Task<IReadOnlyList<RegionDto>> ListAsync(CancellationToken ct = default);
+    Task<IReadOnlyList<RegionStatsDto>> ListStatsAsync(CancellationToken ct = default);
 }

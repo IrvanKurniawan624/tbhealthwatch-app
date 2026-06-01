@@ -6,10 +6,16 @@ import 'surveillance_pill_label.dart';
 
 class SurveillanceConditionSection extends StatelessWidget {
   final VoidCallback onOpenTracing;
+  final String topRegionName;
+  final double complianceRate;
+  final int highRiskCount;
 
   const SurveillanceConditionSection({
     super.key,
     required this.onOpenTracing,
+    required this.topRegionName,
+    required this.complianceRate,
+    required this.highRiskCount,
   });
 
   @override
@@ -67,9 +73,11 @@ class SurveillanceConditionSection extends StatelessWidget {
                       textColor: Color(0xFF6B4100),
                     ),
                     const SizedBox(height: 22),
-                    const Text(
-                      'Wilayah Wonokromo',
-                      style: TextStyle(
+                    Text(
+                      topRegionName.isNotEmpty
+                          ? 'Wilayah $topRegionName'
+                          : 'Tidak Ada Wilayah Berisiko',
+                      style: const TextStyle(
                         fontSize: 24,
                         fontWeight: FontWeight.w900,
                         color: SurveillancePage.textDark,
@@ -107,23 +115,23 @@ class SurveillanceConditionSection extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 18),
-          const Row(
+          Row(
             children: [
               Expanded(
                 child: SurveillanceMiniMetricCard(
                   title: 'Kepatuhan',
-                  value: '98%',
+                  value: '${complianceRate.toStringAsFixed(0)}%',
                   icon: Icons.verified_outlined,
-                  color: Color(0xFF10B981),
+                  color: const Color(0xFF10B981),
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: SurveillanceMiniMetricCard(
                   title: 'Wilayah Risiko',
-                  value: '3',
+                  value: '$highRiskCount',
                   icon: Icons.warning_amber_rounded,
-                  color: Color(0xFFEF4444),
+                  color: const Color(0xFFEF4444),
                 ),
               ),
             ],

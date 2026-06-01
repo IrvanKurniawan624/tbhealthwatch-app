@@ -24,4 +24,27 @@ public class RegionRepository : IRegionRepository
             })
             .ToListAsync(ct);
     }
+
+    public async Task<IReadOnlyList<RegionStatsDto>> ListStatsAsync(CancellationToken ct = default)
+    {
+        var counts = await _db.Patients
+            .Where(p => p.RegionId != null)
+            .GroupBy(p => p.RegionId!.Value)
+            .Select(g => new { RegionId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.RegionId, x => x.Count, ct);
+
+        var regions = await _db.Regions.OrderBy(r => r.Name).ToListAsync(ct);
+
+        return regions.Select(r =>
+        {
+            var count = counts.GetValueOrDefault(r.Id, 0);
+            return new RegionStatsDto
+            {
+                Id = r.Id,
+                Name = r.Name,
+                PatientCount = count,
+                RiskLevel = count >= 50 ? "high" : count >= 20 ? "warning" : "stable"
+            };
+        }).ToList().AsReadOnly();
+    }
 }

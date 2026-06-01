@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../core/api_client.dart';
+import '../../data/models/surveillance_model.dart';
+import '../../data/repositories/api_surveillance_repository.dart';
 import '../tracing/tracing_map_page.dart';
 import '../widgets/custom_app_bar.dart';
 import '../widgets/custom_bottom_nav.dart';
@@ -9,7 +12,7 @@ import 'widgets/surveillance_condition_section.dart';
 import 'widgets/surveillance_summary_card.dart';
 import 'widgets/surveillance_treatment_card.dart';
 
-class SurveillancePage extends StatelessWidget {
+class SurveillancePage extends StatefulWidget {
   const SurveillancePage({super.key});
 
   static const Color primaryBlue = Color(0xFF0052CC);
@@ -19,24 +22,30 @@ class SurveillancePage extends StatelessWidget {
   static const Color softBackground = Color(0xFFF4F6FA);
 
   @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: const CustomAppBar(),
-      bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
-      backgroundColor: Colors.white,
-      body: SingleChildScrollView(
-        physics: const BouncingScrollPhysics(),
-        child: Column(
-          children: [
-            _HeroMapSection(onOpenTracing: () => _openTracing(context)),
-            SurveillanceConditionSection(onOpenTracing: () => _openTracing(context)),
-            const SurveillanceTreatmentCard(),
-            SurveillanceAlertsSection(onOpenTracing: () => _openTracing(context)),
-            const SizedBox(height: 28),
-          ],
-        ),
-      ),
-    );
+  State<SurveillancePage> createState() => _SurveillancePageState();
+}
+
+class _SurveillancePageState extends State<SurveillancePage> {
+  final _repo = ApiSurveillanceRepository(ApiClient());
+
+  SurveillanceSummary? _summary;
+  bool _loading = true;
+  String? _error;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadSummary();
+  }
+
+  Future<void> _loadSummary() async {
+    setState(() { _loading = true; _error = null; });
+    try {
+      final summary = await _repo.getSummary();
+      if (mounted) setState(() { _summary = summary; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() { _error = e.toString(); _loading = false; });
+    }
   }
 
   void _openTracing(BuildContext context) {
@@ -45,12 +54,88 @@ class SurveillancePage extends StatelessWidget {
       MaterialPageRoute(builder: (_) => const TracingMapPage()),
     );
   }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: const CustomAppBar(),
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 0),
+      backgroundColor: Colors.white,
+      body: _loading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? _buildError()
+              : RefreshIndicator(
+                  onRefresh: _loadSummary,
+                  child: SingleChildScrollView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    child: Column(
+                      children: [
+                        _HeroMapSection(
+                          onOpenTracing: () => _openTracing(context),
+                          totalActive: _summary!.totalActive,
+                          newCasesThisMonth: _summary!.newCasesThisMonth,
+                          topRegions: _summary!.topRegions,
+                        ),
+                        SurveillanceConditionSection(
+                          onOpenTracing: () => _openTracing(context),
+                          topRegionName: _summary!.topRegions.isNotEmpty
+                              ? _summary!.topRegions.first.name
+                              : '',
+                          complianceRate: _summary!.complianceRate,
+                          highRiskCount: _summary!.highRiskCount,
+                        ),
+                        SurveillanceTreatmentCard(
+                          complianceRate: _summary!.complianceRate,
+                        ),
+                        SurveillanceAlertsSection(
+                          onOpenTracing: () => _openTracing(context),
+                          alerts: _summary!.alerts,
+                        ),
+                        const SizedBox(height: 28),
+                      ],
+                    ),
+                  ),
+                ),
+    );
+  }
+
+  Widget _buildError() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Gagal memuat data:\n$_error',
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: Colors.red),
+            ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: _loadSummary,
+              child: const Text('Coba Lagi'),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _HeroMapSection extends StatelessWidget {
   final VoidCallback onOpenTracing;
+  final int totalActive;
+  final int newCasesThisMonth;
+  final List<SurveillanceRegionSummary> topRegions;
 
-  const _HeroMapSection({required this.onOpenTracing});
+  const _HeroMapSection({
+    required this.onOpenTracing,
+    required this.totalActive,
+    required this.newCasesThisMonth,
+    required this.topRegions,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -79,7 +164,7 @@ class _HeroMapSection extends StatelessWidget {
             ),
           ),
         ),
-        const Positioned(
+        Positioned(
           top: 22,
           left: 22,
           right: 22,
@@ -88,16 +173,16 @@ class _HeroMapSection extends StatelessWidget {
               Expanded(
                 child: SurveillanceSummaryCard(
                   label: 'TOTAL AKTIF',
-                  value: '1,284',
+                  value: '$totalActive',
                   icon: Icons.groups_2_outlined,
                 ),
               ),
-              SizedBox(width: 12),
+              const SizedBox(width: 12),
               Expanded(
                 child: SurveillanceSummaryCard(
                   label: 'KASUS BARU',
-                  value: '42',
-                  trailing: 'Stabil',
+                  value: '$newCasesThisMonth',
+                  trailing: newCasesThisMonth == 0 ? 'Stabil' : null,
                   icon: Icons.trending_up_rounded,
                 ),
               ),
@@ -108,7 +193,10 @@ class _HeroMapSection extends StatelessWidget {
           top: 186,
           left: 22,
           right: 22,
-          child: SurveillanceCaseCard(onOpenTracing: onOpenTracing),
+          child: SurveillanceCaseCard(
+            onOpenTracing: onOpenTracing,
+            topRegions: topRegions,
+          ),
         ),
       ],
     );

@@ -48,6 +48,8 @@ class ApiClient {
   Future<dynamic> put(String path, Map<String, dynamic> body) =>
       _request('PUT', path, body);
 
+  Future<dynamic> delete(String path) => _request('DELETE', path);
+
   Future<dynamic> _request(String method, String path,
       [Map<String, dynamic>? body]) async {
     final token = await _getAccessToken();
@@ -85,6 +87,8 @@ class ApiClient {
         return http.post(uri, headers: headers, body: encoded);
       case 'PUT':
         return http.put(uri, headers: headers, body: encoded);
+      case 'DELETE':
+        return http.delete(uri, headers: headers);
       default:
         throw ArgumentError('Unsupported HTTP method: $method');
     }

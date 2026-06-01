@@ -1,18 +1,22 @@
 import 'package:flutter/material.dart';
 
+import '../../../data/models/surveillance_model.dart';
 import '../surveillance_page.dart';
-import 'surveillance_sheet_widgets.dart';
 
 class SurveillanceAlertsSection extends StatelessWidget {
   final VoidCallback onOpenTracing;
+  final List<SurveillanceAlert> alerts;
 
   const SurveillanceAlertsSection({
     super.key,
     required this.onOpenTracing,
+    required this.alerts,
   });
 
   @override
   Widget build(BuildContext context) {
+    final displayAlerts = alerts.take(3).toList();
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(22, 30, 22, 0),
       child: Container(
@@ -45,104 +49,43 @@ class SurveillanceAlertsSection extends StatelessWidget {
                     ),
                   ),
                 ),
-                Icon(Icons.notifications_active_outlined, color: SurveillancePage.deepBlue, size: 22),
+                Icon(Icons.notifications_active_outlined,
+                    color: SurveillancePage.deepBlue, size: 22),
               ],
             ),
             const SizedBox(height: 24),
-            SurveillanceAlertItem(
-              iconBackground: const Color(0xFFFFD8A8),
-              icon: Icons.priority_high_rounded,
-              title: 'Klaster Terdeteksi',
-              description: 'Klaster baru sebanyak 15 pasien gejala teridentifikasi di area Pasar Wonokromo.',
-              time: '14 menit yang lalu',
-              onTap: onOpenTracing,
-            ),
-            const SizedBox(height: 22),
-            SurveillanceAlertItem(
-              iconBackground: const Color(0xFFDDE6FF),
-              icon: Icons.person_add_alt_1_outlined,
-              title: 'Pasien Baru',
-              description: 'Terdapat pasien baru di wilayah Gubeng.',
-              time: '2 jam yang lalu',
-              onTap: () {},
-            ),
-            const SizedBox(height: 22),
-            SurveillanceAlertItem(
-              iconBackground: const Color(0xFFE0E2E6),
-              icon: Icons.access_time_rounded,
-              title: 'Update Wilayah Terdampak',
-              description: 'Saat ini Wonokromo menjadi wilayah yang paling terdampak.',
-              time: '4 jam yang lalu',
-              onTap: onOpenTracing,
-            ),
-            const SizedBox(height: 26),
-            SizedBox(
-              width: double.infinity,
-              height: 50,
-              child: OutlinedButton(
-                onPressed: () => _showAllAlertsSheet(context),
-                style: OutlinedButton.styleFrom(
-                  foregroundColor: SurveillancePage.textDark,
-                  side: const BorderSide(color: Color(0xFFC7CCD6)),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                  textStyle: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
+            if (displayAlerts.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 12),
+                child: Text(
+                  'Tidak ada peringatan saat ini.',
+                  style: TextStyle(color: Color(0xFF8A9099)),
                 ),
-                child: const Text('Lihat Semua'),
-              ),
-            ),
+              )
+            else
+              ...List.generate(displayAlerts.length, (i) {
+                final alert = displayAlerts[i];
+                final isHigh = alert.type == 'high';
+                return Padding(
+                  padding: EdgeInsets.only(
+                      bottom: i < displayAlerts.length - 1 ? 22 : 0),
+                  child: SurveillanceAlertItem(
+                    iconBackground: isHigh
+                        ? const Color(0xFFFFD8A8)
+                        : const Color(0xFFDDE6FF),
+                    icon: isHigh
+                        ? Icons.priority_high_rounded
+                        : Icons.warning_amber_outlined,
+                    title: alert.title,
+                    description: alert.description,
+                    time: 'Baru saja',
+                    onTap: onOpenTracing,
+                  ),
+                );
+              }),
           ],
         ),
       ),
-    );
-  }
-
-  void _showAllAlertsSheet(BuildContext context) {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: Colors.white,
-      showDragHandle: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
-      ),
-      builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(24, 6, 24, 28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              const SurveillanceSheetHeader(
-                title: 'Semua Peringatan',
-                subtitle: 'Daftar alert surveillance terbaru.',
-              ),
-              const SizedBox(height: 18),
-              SurveillanceFilterTile(
-                title: 'Klaster Terdeteksi',
-                subtitle: 'Pasar Wonokromo • 14 menit lalu',
-                icon: Icons.priority_high_rounded,
-                onTap: () {
-                  Navigator.pop(context);
-                  onOpenTracing();
-                },
-              ),
-              SurveillanceFilterTile(
-                title: 'Pasien Baru',
-                subtitle: 'Wilayah Gubeng • 2 jam lalu',
-                icon: Icons.person_add_alt_1_outlined,
-                onTap: () => Navigator.pop(context),
-              ),
-              SurveillanceFilterTile(
-                title: 'Update Wilayah',
-                subtitle: 'Wonokromo menjadi wilayah paling terdampak',
-                icon: Icons.access_time_rounded,
-                onTap: () {
-                  Navigator.pop(context);
-                  onOpenTracing();
-                },
-              ),
-            ],
-          ),
-        );
-      },
     );
   }
 }

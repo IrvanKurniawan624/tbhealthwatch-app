@@ -16,12 +16,51 @@ class MonitoringPage extends StatefulWidget {
 
 class _MonitoringPageState extends State<MonitoringPage> {
   final _repository = ApiPatientRepository(ApiClient());
-  late Future<List<Patient>> _patientsFuture;
+
+  List<Patient> _patients = [];
+  bool _loading = true;
+  String _searchQuery = '';
 
   @override
   void initState() {
     super.initState();
-    _patientsFuture = _repository.getMonitoringPatients();
+    _loadPatients();
+  }
+
+  Future<void> _loadPatients() async {
+    setState(() => _loading = true);
+    try {
+      final patients = await _repository.getMonitoringPatients();
+      if (mounted) setState(() { _patients = patients; _loading = false; });
+    } catch (e) {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  List<Patient> get _filtered {
+    if (_searchQuery.isEmpty) return _patients;
+    final q = _searchQuery.toLowerCase();
+    return _patients.where((p) =>
+      p.name.toLowerCase().contains(q) ||
+      (p.nik ?? '').toLowerCase().contains(q) ||
+      p.location.toLowerCase().contains(q),
+    ).toList();
+  }
+
+  Future<void> _openCreate() async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => const CreatePatientPage()),
+    );
+    if (result == true) _loadPatients();
+  }
+
+  Future<void> _openDetail(Patient patient) async {
+    final result = await Navigator.push<bool>(
+      context,
+      MaterialPageRoute(builder: (_) => PatientDetailPage(patient: patient)),
+    );
+    if (result == true) _loadPatients();
   }
 
   @override
@@ -29,64 +68,96 @@ class _MonitoringPageState extends State<MonitoringPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: const CustomAppBar(),
-      body: FutureBuilder<List<Patient>>(
-        future: _patientsFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (snapshot.hasData) {
-            final patients = snapshot.data!;
-            return RefreshIndicator(
-              onRefresh: () async {
-                final future = _repository.getMonitoringPatients();
-                setState(() => _patientsFuture = future);
-                await future;
-              },
-              child: SingleChildScrollView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.all(20.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Monitoring",
-                      style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+      body: RefreshIndicator(
+        onRefresh: _loadPatients,
+        child: CustomScrollView(
+          physics: const AlwaysScrollableScrollPhysics(),
+          slivers: [
+            SliverToBoxAdapter(child: _buildSearchBar()),
+            if (_loading)
+              const SliverFillRemaining(
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_filtered.isEmpty)
+              SliverFillRemaining(
+                child: Center(
+                  child: Text(
+                    _searchQuery.isNotEmpty
+                        ? 'Tidak ada pasien yang cocok.'
+                        : 'Belum ada data pasien.',
+                    style: const TextStyle(color: Colors.grey),
+                  ),
+                ),
+              )
+            else
+              SliverPadding(
+                padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                sliver: SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (_, i) => PatientCard(
+                      patient: _filtered[i],
+                      onTap: () => _openDetail(_filtered[i]),
                     ),
-                    const SizedBox(height: 20),
-                    ...patients.map((patient) => PatientCard(patient: patient)),
-                  ],
+                    childCount: _filtered.length,
+                  ),
                 ),
               ),
-            );
-          }
-          return const SizedBox.shrink();
-        },
+          ],
+        ),
       ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const CreatePatientPage()),
-          );
-          if (result == true) {
-            final future = _repository.getMonitoringPatients();
-            setState(() => _patientsFuture = future);
-          }
-        },
+        onPressed: _openCreate,
         backgroundColor: const Color(0xFF0052CC),
         child: const Icon(Icons.add, color: Colors.white),
       ),
       bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );
   }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            "Monitoring",
+            style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Color(0xFF1F2937)),
+          ),
+          const SizedBox(height: 16),
+          TextField(
+            onChanged: (v) => setState(() => _searchQuery = v),
+            decoration: InputDecoration(
+              hintText: 'Cari nama, NIK, atau wilayah...',
+              prefixIcon: const Icon(Icons.search, color: Colors.grey),
+              filled: true,
+              fillColor: Colors.white,
+              contentPadding: const EdgeInsets.symmetric(vertical: 14),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFFE5E7EB)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(14),
+                borderSide: const BorderSide(color: Color(0xFF0052CC)),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class PatientCard extends StatelessWidget {
   final Patient patient;
+  final VoidCallback onTap;
 
-  const PatientCard({super.key, required this.patient});
+  const PatientCard({super.key, required this.patient, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
@@ -94,12 +165,7 @@ class PatientCard extends StatelessWidget {
         patient.status.toUpperCase().contains("STABLE");
 
     return InkWell(
-      onTap: () {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => PatientDetailPage(patient: patient)),
-        );
-      },
+      onTap: onTap,
       borderRadius: BorderRadius.circular(16),
       child: Container(
         margin: const EdgeInsets.only(bottom: 16),
@@ -158,7 +224,13 @@ class PatientCard extends StatelessWidget {
               children: [
                 const Icon(Icons.location_on_outlined, size: 16, color: Colors.grey),
                 const SizedBox(width: 4),
-                Text(patient.location, style: const TextStyle(fontSize: 13, color: Colors.black87)),
+                Expanded(
+                  child: Text(
+                    patient.location.isNotEmpty ? patient.location : '-',
+                    style: const TextStyle(fontSize: 13, color: Colors.black87),
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
             const SizedBox(height: 24),
@@ -167,7 +239,7 @@ class PatientCard extends StatelessWidget {
               children: [
                 Text(patient.phase, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey)),
                 Text(
-                  "MONTH ${patient.currentMonth} OF ${patient.totalMonths}",
+                  "BULAN ${patient.currentMonth} DARI ${patient.totalMonths}",
                   style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey),
                 ),
               ],
@@ -176,7 +248,9 @@ class PatientCard extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(10),
               child: LinearProgressIndicator(
-                value: patient.currentMonth / patient.totalMonths,
+                value: patient.totalMonths > 0
+                    ? patient.currentMonth / patient.totalMonths
+                    : 0,
                 minHeight: 8,
                 backgroundColor: Colors.grey[300],
                 color: const Color(0xFF2C3E50),

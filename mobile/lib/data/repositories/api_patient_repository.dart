@@ -32,4 +32,8 @@ class ApiPatientRepository implements IPatientRepository {
         await _client.post('/patients', body) as Map<String, dynamic>;
     return Patient.fromJson(data);
   }
+
+  Future<void> delete(String id) async {
+    await _client.delete('/patients/$id');
+  }
 }

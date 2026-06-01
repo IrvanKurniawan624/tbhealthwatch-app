@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../surveillance_page.dart';
 
 class SurveillanceTreatmentCard extends StatelessWidget {
-  const SurveillanceTreatmentCard({super.key});
+  final double complianceRate;
+
+  const SurveillanceTreatmentCard({super.key, required this.complianceRate});
 
   @override
   Widget build(BuildContext context) {
@@ -36,26 +38,26 @@ class SurveillanceTreatmentCard extends StatelessWidget {
             ),
             Column(
               crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
+              children: [
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _BlueIconBox(),
-                    Spacer(),
+                    const _BlueIconBox(),
+                    const Spacer(),
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.end,
                       children: [
                         Text(
-                          '98%',
-                          style: TextStyle(
+                          '${complianceRate.toStringAsFixed(0)}%',
+                          style: const TextStyle(
                             fontSize: 34,
                             fontWeight: FontWeight.w900,
                             color: Colors.white,
                             height: 1,
                           ),
                         ),
-                        SizedBox(height: 4),
-                        Text(
+                        const SizedBox(height: 4),
+                        const Text(
                           'KEPATUHAN',
                           style: TextStyle(
                             fontSize: 11,
@@ -68,8 +70,8 @@ class SurveillanceTreatmentCard extends StatelessWidget {
                     ),
                   ],
                 ),
-                SizedBox(height: 48),
-                Text(
+                const SizedBox(height: 48),
+                const Text(
                   'Keberhasilan Pengobatan',
                   style: TextStyle(
                     fontSize: 21,
@@ -77,8 +79,8 @@ class SurveillanceTreatmentCard extends StatelessWidget {
                     color: Colors.white,
                   ),
                 ),
-                SizedBox(height: 11),
-                Text(
+                const SizedBox(height: 11),
+                const Text(
                   'Kepatuhan pengobatan di seluruh Surabaya tetap sangat tinggi bulan ini.',
                   style: TextStyle(
                     fontSize: 15,

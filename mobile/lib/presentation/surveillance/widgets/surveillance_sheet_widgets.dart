@@ -7,6 +7,7 @@ class SurveillanceFilterTile extends StatelessWidget {
   final String subtitle;
   final IconData icon;
   final VoidCallback onTap;
+  final bool isSelected;
 
   const SurveillanceFilterTile({
     super.key,
@@ -14,6 +15,7 @@ class SurveillanceFilterTile extends StatelessWidget {
     required this.subtitle,
     required this.icon,
     required this.onTap,
+    this.isSelected = false,
   });
 
   @override
@@ -25,16 +27,20 @@ class SurveillanceFilterTile extends StatelessWidget {
         width: 44,
         height: 44,
         decoration: BoxDecoration(
-          color: SurveillancePage.deepBlue.withOpacity(0.08),
+          color: isSelected
+              ? SurveillancePage.deepBlue.withOpacity(0.15)
+              : SurveillancePage.deepBlue.withOpacity(0.08),
           borderRadius: BorderRadius.circular(14),
         ),
         child: Icon(icon, color: SurveillancePage.deepBlue),
       ),
       title: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.w900,
-          color: SurveillancePage.textDark,
+          color: isSelected
+              ? SurveillancePage.deepBlue
+              : SurveillancePage.textDark,
         ),
       ),
       subtitle: Text(
@@ -45,7 +51,9 @@ class SurveillanceFilterTile extends StatelessWidget {
           fontWeight: FontWeight.w500,
         ),
       ),
-      trailing: const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
+      trailing: isSelected
+          ? const Icon(Icons.check_circle_rounded, color: SurveillancePage.deepBlue)
+          : const Icon(Icons.chevron_right_rounded, color: Color(0xFF9CA3AF)),
       onTap: onTap,
     );
   }
