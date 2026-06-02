@@ -8,7 +8,7 @@ class UnauthorizedException implements Exception {
 }
 
 class ApiClient {
-  static const String _baseUrl = 'https://tbhealthwatch-api-18726666384.asia-southeast2.run.app/api';
+  static const String _baseUrl = 'http://192.168.1.22:5050/api';
   static const String _accessTokenKey = 'access_token';
   static const String _refreshTokenKey = 'refresh_token';
 
