@@ -29,6 +29,7 @@ class _SurveillanceCaseCardState extends State<SurveillanceCaseCard> {
     }
     return widget.topRegions
         .where((r) => r.riskLevel == _selectedFilter)
+        .take(2)
         .toList();
   }
 

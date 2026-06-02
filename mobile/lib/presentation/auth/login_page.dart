@@ -144,21 +144,9 @@ class LoginForm extends StatelessWidget {
         const SizedBox(height: 8),
         _buildTextField(controller: emailController, hintText: "admin@gmail.com", icon: Icons.badge_outlined),
         const SizedBox(height: 20),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            const Text(
-              "PASSWORD",
-              style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0),
-            ),
-            GestureDetector(
-              onTap: () {},
-              child: const Text(
-                "Forgot Password?",
-                style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF0052CC)),
-              ),
-            ),
-          ],
+        const Text(
+          "PASSWORD",
+          style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Colors.grey, letterSpacing: 1.0),
         ),
         const SizedBox(height: 8),
         _buildTextField(controller: passwordController, hintText: "••••••••", icon: Icons.lock_outline, isPassword: true),
