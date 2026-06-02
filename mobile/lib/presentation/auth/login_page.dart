@@ -91,9 +91,9 @@ class LoginHeader extends StatelessWidget {
       children: [
         Image.asset(
           'assets/images/logo.png',
-          height: 60,
+          height: 80,
           errorBuilder: (context, error, stackTrace) =>
-              const Icon(Icons.health_and_safety, size: 60, color: Color(0xFF0052CC)),
+              const Icon(Icons.health_and_safety, size: 80, color: Color(0xFF0052CC)),
         ),
         const SizedBox(height: 32),
         const Text(

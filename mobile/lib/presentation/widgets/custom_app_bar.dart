@@ -16,7 +16,7 @@ class CustomAppBar extends StatelessWidget implements PreferredSizeWidget {
         children: [
           Image.asset(
             'assets/images/logo.png',
-            height: 24,
+            height: 36,
             errorBuilder: (context, error, stackTrace) =>
                 const Icon(Icons.health_and_safety, color: Colors.blue),
           ),
