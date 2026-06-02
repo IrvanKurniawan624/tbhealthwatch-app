@@ -1,6 +1,10 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
 
+import '../../../core/api_client.dart';
+import '../../../data/models/region_stats_model.dart';
 import '../../../data/models/surveillance_model.dart';
+import '../../../data/repositories/api_surveillance_repository.dart';
 import '../surveillance_page.dart';
 import 'surveillance_impacted_area_row.dart';
 import 'surveillance_sheet_widgets.dart';
@@ -266,88 +270,208 @@ class _SurveillanceCaseCardState extends State<SurveillanceCaseCard> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(26)),
       ),
       builder: (ctx) {
-        String query = '';
-        final maxHeight = MediaQuery.of(ctx).size.height * 0.75;
-
-        return StatefulBuilder(
-          builder: (ctx, setSheetState) {
-            final filtered = query.isEmpty
-                ? widget.topRegions.take(5).toList()
-                : widget.topRegions
-                    .where((r) =>
-                        r.name.toLowerCase().contains(query.toLowerCase()))
-                    .toList();
-
-            final bottomInset = MediaQuery.of(ctx).viewInsets.bottom;
-
-            return ConstrainedBox(
-              constraints: BoxConstraints(maxHeight: maxHeight),
-              child: Padding(
-                padding: EdgeInsets.fromLTRB(24, 6, 24, bottomInset + 28),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const SurveillanceSheetHeader(
-                      title: 'Cari Wilayah atau Pasien',
-                      subtitle: 'Wilayah dengan pasien aktif.',
-                    ),
-                    const SizedBox(height: 18),
-                    TextField(
-                      autofocus: true,
-                      onChanged: (v) => setSheetState(() => query = v),
-                      decoration: InputDecoration(
-                        hintText: 'Contoh: Wonokromo',
-                        prefixIcon: const Icon(Icons.search_rounded),
-                        filled: true,
-                        fillColor: const Color(0xFFF3F4F6),
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(16),
-                          borderSide: BorderSide.none,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    if (filtered.isEmpty)
-                      const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 16),
-                        child: Text(
-                          'Tidak ada wilayah yang cocok.',
-                          style: TextStyle(color: Color(0xFF8A9099)),
-                        ),
-                      )
-                    else
-                      Flexible(
-                        child: ListView(
-                          shrinkWrap: true,
-                          children: filtered.map((region) {
-                            String riskLabel;
-                            if (region.riskLevel == 'high') {
-                              riskLabel = 'Risiko tinggi';
-                            } else if (region.riskLevel == 'warning') {
-                              riskLabel = 'Peringatan';
-                            } else {
-                              riskLabel = 'Stabil';
-                            }
-                            return SurveillanceFilterTile(
-                              title: 'Wilayah ${region.name}',
-                              subtitle:
-                                  '${region.patientCount} kasus aktif • $riskLabel',
-                              icon: Icons.location_on_outlined,
-                              onTap: () {
-                                Navigator.pop(ctx);
-                                widget.onOpenTracing();
-                              },
-                            );
-                          }).toList(),
-                        ),
-                      ),
-                  ],
-                ),
-              ),
-            );
-          },
+        return _SearchSheetContent(
+          onOpenTracing: widget.onOpenTracing,
         );
       },
+    );
+  }
+}
+
+class _SearchSheetContent extends StatefulWidget {
+  final VoidCallback onOpenTracing;
+  const _SearchSheetContent({required this.onOpenTracing});
+
+  @override
+  State<_SearchSheetContent> createState() => _SearchSheetContentState();
+}
+
+class _SearchSheetContentState extends State<_SearchSheetContent> {
+  final _repo = ApiSurveillanceRepository(ApiClient());
+  final TextEditingController _searchController = TextEditingController();
+
+  List<RegionStats> _regions = [];
+  bool _loading = false;
+  bool _loadingMore = false;
+  int _page = 1;
+  static const int _pageSize = 15;
+  bool _hasMore = true;
+  String _query = '';
+  Timer? _debounce;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadRegions(reset: true);
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
+  Future<void> _loadRegions({bool reset = false}) async {
+    if (reset) {
+      setState(() {
+        _loading = true;
+        _page = 1;
+        _hasMore = true;
+      });
+    }
+
+    try {
+      final newRegions = await _repo.getRegionStats(
+        search: _query,
+        page: _page,
+        pageSize: _pageSize,
+      );
+
+      if (mounted) {
+        setState(() {
+          if (reset) {
+            _regions = newRegions;
+          } else {
+            _regions.addAll(newRegions);
+          }
+          _hasMore = newRegions.length >= _pageSize;
+          _loading = false;
+          _loadingMore = false;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _loading = false;
+          _loadingMore = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _loadMoreRegions() async {
+    setState(() {
+      _loadingMore = true;
+      _page++;
+    });
+    await _loadRegions();
+  }
+
+  void _onSearchChanged(String val) {
+    if (_debounce?.isActive ?? false) _debounce!.cancel();
+    _debounce = Timer(const Duration(milliseconds: 500), () {
+      setState(() {
+        _query = val;
+      });
+      _loadRegions(reset: true);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+    final maxHeight = MediaQuery.of(context).size.height * 0.75;
+
+    return ConstrainedBox(
+      constraints: BoxConstraints(maxHeight: maxHeight),
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(24, 6, 24, bottomInset + 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const SurveillanceSheetHeader(
+              title: 'Cari Wilayah atau Pasien',
+              subtitle: 'Wilayah dengan pasien aktif.',
+            ),
+            const SizedBox(height: 18),
+            TextField(
+              controller: _searchController,
+              autofocus: true,
+              onChanged: _onSearchChanged,
+              decoration: InputDecoration(
+                hintText: 'Contoh: Wonokromo',
+                prefixIcon: const Icon(Icons.search_rounded),
+                suffixIcon: _searchController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear),
+                        onPressed: () {
+                          _searchController.clear();
+                          _onSearchChanged('');
+                        },
+                      )
+                    : null,
+                filled: true,
+                fillColor: const Color(0xFFF3F4F6),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(16),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
+            if (_loading)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_regions.isEmpty)
+              const Padding(
+                padding: EdgeInsets.symmetric(vertical: 32),
+                child: Text(
+                  'Tidak ada wilayah yang cocok.',
+                  style: TextStyle(color: Color(0xFF8A9099)),
+                ),
+              )
+            else
+              Flexible(
+                child: ListView.builder(
+                  shrinkWrap: true,
+                  itemCount: _regions.length + (_hasMore ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (index == _regions.length) {
+                      if (!_loading && !_loadingMore && _hasMore) {
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          _loadMoreRegions();
+                        });
+                      }
+                      return const Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        ),
+                      );
+                    }
+
+                    final region = _regions[index];
+                    String riskLabel;
+                    if (region.riskLevel == 'high') {
+                      riskLabel = 'Risiko tinggi';
+                    } else if (region.riskLevel == 'warning') {
+                      riskLabel = 'Peringatan';
+                    } else {
+                      riskLabel = 'Stabil';
+                    }
+
+                    return SurveillanceFilterTile(
+                      title: 'Wilayah ${region.name}',
+                      subtitle: '${region.patientCount} kasus aktif • $riskLabel',
+                      icon: Icons.location_on_outlined,
+                      onTap: () {
+                        Navigator.pop(context);
+                        widget.onOpenTracing();
+                      },
+                    );
+                  },
+                ),
+              ),
+          ],
+        ),
+      ),
     );
   }
 }

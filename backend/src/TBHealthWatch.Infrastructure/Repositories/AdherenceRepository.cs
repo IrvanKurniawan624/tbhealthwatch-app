@@ -24,11 +24,6 @@ public class AdherenceRepository : IAdherenceRepository
         if (adherence == null) return new AdherenceSummaryDto();
 
         var logs = adherence.AdherenceLogs.ToList();
-        int dosesTaken = logs.Count(l => l.Status == "taken");
-
-        var treatmentEnd = adherence.Phase2EndDate ?? adherence.Phase1EndDate;
-        var lastDay = today < treatmentEnd ? today : treatmentEnd;
-        int dosesTotal = Math.Max(1, lastDay.DayNumber - adherence.Phase1StartDate.DayNumber + 1);
 
         // Streak: consecutive 'taken' days backwards from yesterday
         var takenDates = logs.Where(l => l.Status == "taken").Select(l => l.LogDate).ToHashSet();
@@ -41,10 +36,32 @@ public class AdherenceRepository : IAdherenceRepository
         }
 
         bool inPhase2 = adherence.Phase2StartDate.HasValue && today >= adherence.Phase2StartDate.Value;
+        int dosesTotal;
+        int dosesTaken;
+        int elapsedDays;
+
+        if (inPhase2)
+        {
+            var phase2Start = adherence.Phase2StartDate!.Value;
+            var phase2End = adherence.Phase2EndDate ?? phase2Start.AddMonths(4);
+            dosesTotal = Math.Max(1, phase2End.DayNumber - phase2Start.DayNumber + 1);
+            dosesTaken = logs.Count(l => l.Status == "taken" && l.Phase == "phase_2");
+            var lastDay = today < phase2End ? today : phase2End;
+            elapsedDays = Math.Max(1, lastDay.DayNumber - phase2Start.DayNumber + 1);
+        }
+        else
+        {
+            var phase1Start = adherence.Phase1StartDate;
+            var phase1End = adherence.Phase1EndDate;
+            dosesTotal = Math.Max(1, phase1End.DayNumber - phase1Start.DayNumber + 1);
+            dosesTaken = logs.Count(l => l.Status == "taken" && l.Phase == "phase_1");
+            var lastDay = today < phase1End ? today : phase1End;
+            elapsedDays = Math.Max(1, lastDay.DayNumber - phase1Start.DayNumber + 1);
+        }
 
         return new AdherenceSummaryDto
         {
-            Percentage = dosesTotal > 0 ? Math.Round((decimal)dosesTaken / dosesTotal * 100, 1) : 0,
+            Percentage = elapsedDays > 0 ? Math.Round((decimal)dosesTaken / elapsedDays * 100, 1) : 0,
             Target = 95,
             DosesTaken = dosesTaken,
             DosesTotal = dosesTotal,

@@ -11,14 +11,85 @@ public class PatientRepository : IPatientRepository
 
     public PatientRepository(AppDbContext db) => _db = db;
 
-    public async Task<IReadOnlyList<PatientListItemDto>> ListAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<PatientListItemDto>> ListAsync(
+        string? search = null,
+        int page = 1,
+        int pageSize = 10,
+        string? phase = null,
+        string? status = null,
+        string? sortBy = null,
+        CancellationToken ct = default)
     {
         var today = DateOnly.FromDateTime(DateTime.UtcNow);
 
-        var patients = await _db.Patients
+        var query = _db.Patients
             .Include(p => p.Region)
             .Include(p => p.MedicationAdherences.Where(m => m.Status == "active"))
-            .OrderBy(p => p.FullName)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            query = query.Where(p => 
+                p.FullName.ToLower().Contains(s) || 
+                (p.Nik != null && p.Nik.ToLower().Contains(s)) ||
+                (p.Region != null && p.Region.Name.ToLower().Contains(s)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(phase) && phase.ToLower() != "all")
+        {
+            var pLower = phase.ToLower();
+            if (pLower == "phase1")
+            {
+                query = query.Where(p => p.MedicationAdherences.Any(m => m.Status == "active" && (!m.Phase2StartDate.HasValue || today < m.Phase2StartDate.Value)));
+            }
+            else if (pLower == "phase2")
+            {
+                query = query.Where(p => p.MedicationAdherences.Any(m => m.Status == "active" && m.Phase2StartDate.HasValue && today >= m.Phase2StartDate.Value));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(status) && status.ToLower() != "all")
+        {
+            var sLower = status.ToLower();
+            if (sLower == "active")
+            {
+                query = query.Where(p => p.MedicationAdherences.Any(m => m.Status == "active"));
+            }
+            else if (sLower == "stable")
+            {
+                query = query.Where(p => !p.MedicationAdherences.Any(m => m.Status == "active"));
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(sortBy))
+        {
+            var sort = sortBy.ToLower();
+            if (sort == "name_desc")
+            {
+                query = query.OrderByDescending(p => p.FullName).ThenBy(p => p.Id);
+            }
+            else if (sort == "name_asc")
+            {
+                query = query.OrderBy(p => p.FullName).ThenBy(p => p.Id);
+            }
+            else if (sort == "registered_oldest")
+            {
+                query = query.OrderBy(p => p.RegisteredAt ?? p.CreatedAt).ThenBy(p => p.Id);
+            }
+            else // defaults / includes "registered_newest"
+            {
+                query = query.OrderByDescending(p => p.RegisteredAt ?? p.CreatedAt).ThenByDescending(p => p.Id);
+            }
+        }
+        else
+        {
+            query = query.OrderByDescending(p => p.RegisteredAt ?? p.CreatedAt).ThenByDescending(p => p.Id);
+        }
+
+        var patients = await query
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync(ct);
 
         return patients.Select(p => BuildListItem(p, today)).ToList().AsReadOnly();
@@ -135,16 +206,11 @@ public class PatientRepository : IPatientRepository
     public async Task DeleteAsync(Guid id, CancellationToken ct = default)
     {
         var patient = await _db.Patients
-            .Include(p => p.MedicationAdherences)
-                .ThenInclude(a => a.AdherenceLogs)
             .FirstOrDefaultAsync(p => p.Id == id, ct)
             ?? throw new KeyNotFoundException($"Patient {id} not found");
 
-        foreach (var adherence in patient.MedicationAdherences)
-            _db.AdherenceLogs.RemoveRange(adherence.AdherenceLogs);
-
-        _db.MedicationAdherences.RemoveRange(patient.MedicationAdherences);
-        _db.Patients.Remove(patient);
+        patient.DeletedAt = DateTime.UtcNow;
+        patient.UpdatedAt = DateTime.UtcNow;
         await _db.SaveChangesAsync(ct);
     }
 

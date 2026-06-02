@@ -3,7 +3,14 @@ import 'patient_repository.dart';
 
 class MockPatientRepository implements IPatientRepository {
   @override
-  Future<List<Patient>> getMonitoringPatients() async {
+  Future<List<Patient>> getMonitoringPatients({
+    String? search,
+    int? page,
+    int? pageSize,
+    String? phase,
+    String? status,
+    String? sortBy,
+  }) async {
     await Future.delayed(const Duration(seconds: 1));
     return [
       Patient(

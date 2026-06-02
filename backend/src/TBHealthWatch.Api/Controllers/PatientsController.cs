@@ -20,8 +20,15 @@ public class PatientsController : ControllerBase
     }
 
     [HttpGet]
-    public async Task<ActionResult<IReadOnlyList<PatientListItemDto>>> List(CancellationToken ct)
-        => Ok(await _patients.ListAsync(ct));
+    public async Task<ActionResult<IReadOnlyList<PatientListItemDto>>> List(
+        [FromQuery] string? search,
+        [FromQuery] int page = 1,
+        [FromQuery] int pageSize = 10,
+        [FromQuery] string? phase = null,
+        [FromQuery] string? status = null,
+        [FromQuery] string? sortBy = null,
+        CancellationToken ct = default)
+        => Ok(await _patients.ListAsync(search, page, pageSize, phase, status, sortBy, ct));
 
     [HttpGet("{id:guid}")]
     public async Task<ActionResult<PatientDetailDto>> GetById(Guid id, CancellationToken ct)
