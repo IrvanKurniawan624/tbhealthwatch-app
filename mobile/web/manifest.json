@@ -1,6 +1,6 @@
 {
-    "name": "projekakhir",
-    "short_name": "projekakhir",
+    "name": "TB Health Watch",
+    "short_name": "TB Health Watch",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

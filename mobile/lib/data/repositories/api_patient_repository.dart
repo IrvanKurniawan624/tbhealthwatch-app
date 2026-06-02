@@ -8,8 +8,36 @@ class ApiPatientRepository implements IPatientRepository {
   ApiPatientRepository(this._client);
 
   @override
-  Future<List<Patient>> getMonitoringPatients() async {
-    final data = await _client.get('/patients') as List;
+  Future<List<Patient>> getMonitoringPatients({
+    String? search,
+    int? page,
+    int? pageSize,
+    String? phase,
+    String? status,
+    String? sortBy,
+  }) async {
+    final queryParams = <String>[];
+    if (search != null && search.isNotEmpty) {
+      queryParams.add('search=${Uri.encodeComponent(search)}');
+    }
+    if (page != null) {
+      queryParams.add('page=$page');
+    }
+    if (pageSize != null) {
+      queryParams.add('pageSize=$pageSize');
+    }
+    if (phase != null && phase.isNotEmpty) {
+      queryParams.add('phase=$phase');
+    }
+    if (status != null && status.isNotEmpty) {
+      queryParams.add('status=$status');
+    }
+    if (sortBy != null && sortBy.isNotEmpty) {
+      queryParams.add('sortBy=$sortBy');
+    }
+
+    final queryString = queryParams.isNotEmpty ? '?${queryParams.join('&')}' : '';
+    final data = await _client.get('/patients$queryString') as List;
     return data
         .map((e) => Patient.fromJson(e as Map<String, dynamic>))
         .toList();

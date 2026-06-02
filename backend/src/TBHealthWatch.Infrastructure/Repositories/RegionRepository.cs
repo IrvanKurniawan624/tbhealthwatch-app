@@ -25,15 +25,35 @@ public class RegionRepository : IRegionRepository
             .ToListAsync(ct);
     }
 
-    public async Task<IReadOnlyList<RegionStatsDto>> ListStatsAsync(CancellationToken ct = default)
+    public async Task<IReadOnlyList<RegionStatsDto>> ListStatsAsync(
+        string? search = null,
+        int? page = null,
+        int? pageSize = null,
+        CancellationToken ct = default)
     {
+        var query = _db.Regions.AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var s = search.Trim().ToLower();
+            query = query.Where(r => r.Name.ToLower().Contains(s));
+        }
+
+        query = query.OrderBy(r => r.Name);
+
+        if (page.HasValue && pageSize.HasValue)
+        {
+            query = query.Skip((page.Value - 1) * pageSize.Value).Take(pageSize.Value);
+        }
+
+        var regions = await query.ToListAsync(ct);
+        var regionIds = regions.Select(r => r.Id).ToList();
+
         var counts = await _db.Patients
-            .Where(p => p.RegionId != null)
+            .Where(p => p.RegionId != null && regionIds.Contains(p.RegionId.Value))
             .GroupBy(p => p.RegionId!.Value)
             .Select(g => new { RegionId = g.Key, Count = g.Count() })
             .ToDictionaryAsync(x => x.RegionId, x => x.Count, ct);
-
-        var regions = await _db.Regions.OrderBy(r => r.Name).ToListAsync(ct);
 
         return regions.Select(r =>
         {
