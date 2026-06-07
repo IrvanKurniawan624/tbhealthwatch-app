@@ -1,0 +1,5 @@
+name: "Synapse: Claim Task"
+description: Claim ownership of a task before starting work
+command: synapse claim {{task_id}}
+tags:
+  - synapse

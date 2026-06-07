@@ -1,0 +1,5 @@
+name: "Synapse: Status"
+description: Show task ownership, current handoff, and stale locks
+command: synapse status
+tags:
+  - synapse

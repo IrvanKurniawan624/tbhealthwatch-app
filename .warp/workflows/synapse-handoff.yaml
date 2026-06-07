@@ -1,0 +1,5 @@
+name: "Synapse: Handoff"
+description: Pass the baton to another agent after completing a task
+command: synapse handoff
+tags:
+  - synapse

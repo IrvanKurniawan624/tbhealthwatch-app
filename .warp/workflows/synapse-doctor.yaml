@@ -1,0 +1,5 @@
+name: "Synapse: Doctor"
+description: Validate .context/ and lint for issues
+command: synapse doctor
+tags:
+  - synapse

@@ -1,0 +1,5 @@
+name: "Synapse: Ship"
+description: Commit, push, and open a PR for the current task
+command: synapse ship
+tags:
+  - synapse
